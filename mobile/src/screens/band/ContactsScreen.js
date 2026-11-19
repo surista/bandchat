@@ -13,10 +13,10 @@ import {
   ActivityIndicator,
   RefreshControl,
   Linking,
-  KeyboardAvoidingView,
   Platform,
   StyleSheet,
 } from 'react-native';
+import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../../context/ThemeContext';
 import ActionSheet from '../../components/ActionSheet';
@@ -365,7 +365,7 @@ export default function ContactsScreen({ navigation, route }) {
 
       {/* Create/Edit Modal */}
       <Modal visible={showModal} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setShowModal(false)}>
-        <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <KeyboardAvoidingView style={styles.modalOverlay} behavior="padding">
           <View style={[styles.modalContent, { backgroundColor: colors.modalBg }]} accessibilityViewIsModal>
             <ScrollView showsVerticalScrollIndicator={false} keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}>
               <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>

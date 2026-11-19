@@ -9,7 +9,11 @@ import {
   ActivityIndicator,
   StyleSheet,
   Platform,
+  AppState,
+  Linking,
 } from 'react-native';
+import * as Notifications from 'expo-notifications';
+import { MIN_TOUCH_TARGET } from '../../utils/touchTarget';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../../context/ThemeContext';
 import api from '../../services/api';
@@ -41,6 +45,24 @@ export default function NotificationsScreen({ route }) {
   const [updating, setUpdating] = useState(false);
   const [prefs, setPrefs] = useState(null);
   const [prefsLoading, setPrefsLoading] = useState(false);
+  // OS-level permission. If the user turned notifications off in system
+  // settings (or denied the Android 13+ prompt), nothing in this screen can
+  // deliver a push, so say so instead of showing "Active".
+  const [osBlocked, setOsBlocked] = useState(false);
+
+  useEffect(() => {
+    const check = () => {
+      Notifications.getPermissionsAsync()
+        .then(({ status }) => setOsBlocked(status === 'denied'))
+        .catch(() => {});
+    };
+    check();
+    // Re-check when returning from the system settings app.
+    const sub = AppState.addEventListener('change', (next) => {
+      if (next === 'active') check();
+    });
+    return () => sub.remove();
+  }, []);
 
   const loadData = useCallback(async () => {
     try {
@@ -103,6 +125,7 @@ export default function NotificationsScreen({ route }) {
   const snoozeUntil = snoozeStatus?.until;
 
   const getStatusText = () => {
+    if (osBlocked) return 'Off in system settings';
     if (!isSnoozed) return 'Active';
     if (snoozeStatus?.indefinite) return 'Snoozed indefinitely';
     if (snoozeUntil) {
@@ -130,12 +153,26 @@ export default function NotificationsScreen({ route }) {
         <View style={[styles.card, { backgroundColor: colors.bgSecondary }]}>
           <View style={styles.statusRow}>
             <Text style={[styles.statusLabel, { color: colors.textPrimary }]}>Notifications</Text>
-            <View style={[styles.statusBadge, { backgroundColor: isSnoozed ? '#f59e0b20' : '#22c55e20' }]}>
-              <Text style={[styles.statusText, { color: isSnoozed ? '#f59e0b' : '#22c55e' }]}>
+            <View style={[styles.statusBadge, { backgroundColor: osBlocked ? '#ef444420' : isSnoozed ? '#f59e0b20' : '#22c55e20' }]}>
+              <Text style={[styles.statusText, { color: osBlocked ? '#ef4444' : isSnoozed ? '#f59e0b' : '#22c55e' }]} maxFontSizeMultiplier={1.5}>
                 {getStatusText()}
               </Text>
             </View>
           </View>
+          {osBlocked && (
+            <PressableRow
+              style={[styles.openSettingsRow, { borderTopColor: colors.border }]}
+              onPress={() => Linking.openSettings().catch(() => {})}
+              accessibilityRole="button"
+              accessibilityLabel="Open system notification settings"
+              accessibilityHint="Notifications are turned off for BandChat in system settings"
+            >
+              <Text style={[styles.openSettingsHint, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>
+                BandChat can't send you notifications until you allow them in your phone's settings.
+              </Text>
+              <Text style={[styles.openSettingsText, { color: colors.primary }]} maxFontSizeMultiplier={1.5}>Open Settings</Text>
+            </PressableRow>
+          )}
         </View>
 
         {/* Notification Preferences */}
@@ -234,6 +271,14 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   statusLabel: { fontSize: 16, fontWeight: '500' },
+  openSettingsRow: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    minHeight: MIN_TOUCH_TARGET,
+  },
+  openSettingsHint: { fontSize: 13, marginBottom: 6 },
+  openSettingsText: { fontSize: 15, fontWeight: '600' },
   statusBadge: {
     paddingHorizontal: 10,
     paddingVertical: 4,

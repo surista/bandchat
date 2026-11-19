@@ -9,10 +9,10 @@ import {
   Alert,
   ActivityIndicator,
   RefreshControl,
-  KeyboardAvoidingView,
   Platform,
   StyleSheet,
 } from 'react-native';
+import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
@@ -208,7 +208,7 @@ export default function WorkspaceMembersScreen({ route, navigation }) {
         </View>
       </PressableRow>
     );
-  }, [colors, user?.id]);
+  }, [colors, user?.id, isAdmin, navigation, workspaceId]);
 
   if (loading) {
     return (
@@ -316,7 +316,7 @@ export default function WorkspaceMembersScreen({ route, navigation }) {
 
       {/* Password Reset Modal */}
       <Modal visible={showPasswordReset} transparent animationType="fade" statusBarTranslucent onRequestClose={() => { setShowPasswordReset(false); clearPasswordFields(); }}>
-        <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <KeyboardAvoidingView style={styles.modalOverlay} behavior="padding">
           <View style={[styles.modalContent, { backgroundColor: colors.modalBg }]} accessibilityViewIsModal>
             <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>Reset Password</Text>
             <Text style={[styles.modalDesc, { color: colors.textSecondary }]}>

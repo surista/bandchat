@@ -9,6 +9,7 @@ import {
   RefreshControl,
   Platform,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
@@ -28,6 +29,7 @@ function formatMessageDate(date) {
 export default function TimelineScreen({ navigation, route }) {
   const { workspaceId } = route.params;
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
   const { isTablet, contentMaxWidth } = useLayout();
   const { socket } = useSocket();
   const [messages, setMessages] = useState([]);
@@ -264,7 +266,7 @@ export default function TimelineScreen({ navigation, route }) {
         data={messages}
         keyExtractor={(item) => item.id}
         renderItem={renderItem}
-        contentContainerStyle={styles.list}
+        contentContainerStyle={[styles.list, Platform.OS === 'android' && { paddingBottom: insets.bottom + 12 }]}
         onEndReached={loadMore}
         onEndReachedThreshold={0.3}
         ListFooterComponent={renderFooter}
@@ -274,6 +276,8 @@ export default function TimelineScreen({ navigation, route }) {
             refreshing={refreshing}
             onRefresh={handleRefresh}
             tintColor={colors.primary}
+            colors={[colors.primary]}
+            progressBackgroundColor={colors.bgSecondary}
           />
         }
       />

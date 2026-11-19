@@ -13,9 +13,9 @@ import {
   ActivityIndicator,
   Linking,
   StyleSheet,
-  KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useHeaderHeight } from '@react-navigation/elements';
@@ -28,6 +28,7 @@ import api from '../../services/api';
 import { formatDuration } from '../../utils/formatDuration';
 import { broadcastAudioPlay, subscribeAudioPause } from '../../utils/audioPlaybackCoordinator';
 import { useLayout } from '../../hooks/useLayout';
+import { useDiscardChangesGuard } from '../../hooks/useDiscardChangesGuard';
 import ErrorState from '../../components/ErrorState';
 import PressableRow from '../../components/PressableRow';
 import { getMaxSizeForMimeType } from '../../utils/fileValidation';
@@ -347,14 +348,21 @@ export default function SongDetailScreen({ navigation, route }) {
     }
   }, [title, shortName, artist, key, bpm, duration, youtubeUrl, spotifyUrl, notes, lyrics, arrangement, isNew, workspaceId, songId, navigation, populateForm]);
 
+  // Back gesture / button while editing would silently drop the form.
+  const { leave: leaveWithoutPrompt } = useDiscardChangesGuard(navigation, {
+    active: editing,
+    resetKey: song,
+    values: [title, artist, shortName, key, bpm, duration, lyrics, notes, arrangement, spotifyUrl, youtubeUrl],
+  });
+
   const handleCancel = useCallback(() => {
     if (isNew) {
-      navigation.goBack();
+      leaveWithoutPrompt(() => navigation.goBack());
     } else {
       populateForm(song);
       setEditing(false);
     }
-  }, [isNew, song, navigation, populateForm]);
+  }, [isNew, song, navigation, populateForm, leaveWithoutPrompt]);
 
   const handleDelete = useCallback(() => {
     Alert.alert('Delete Song', `Delete "${song?.title}"?`, [
@@ -487,10 +495,10 @@ export default function SongDetailScreen({ navigation, route }) {
     return (
       <KeyboardAvoidingView
         style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? headerHeight : 0}
+        behavior="padding"
+        keyboardVerticalOffset={headerHeight}
       >
-        <ScrollView contentContainerStyle={[styles.formContent, isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]} keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}>
+        <ScrollView contentContainerStyle={[styles.formContent, { paddingBottom: insets.bottom + 40 }, isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]} keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}>
           <Text style={[styles.label, { color: colors.textSecondary }]}>Title *</Text>
           <TextInput
             style={[styles.input, { backgroundColor: colors.bgTertiary, color: colors.textPrimary, borderColor: fieldErrors.title ? '#ef4444' : colors.border }]}
@@ -680,7 +688,7 @@ export default function SongDetailScreen({ navigation, route }) {
         {/* Key Picker Modal */}
         <Modal visible={showKeyPicker} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setShowKeyPicker(false)}>
           <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowKeyPicker(false)} accessibilityRole="button" accessibilityLabel="Dismiss key picker">
-            <View style={[styles.keyPickerContent, { backgroundColor: colors.modalBg }]} accessibilityViewIsModal>
+            <View style={[styles.keyPickerContent, { backgroundColor: colors.modalBg, paddingBottom: Math.max(insets.bottom, 20) + 20 }]} accessibilityViewIsModal>
               <Text style={[styles.keyPickerTitle, { color: colors.textPrimary }]} accessibilityRole="header">Select Key</Text>
               <PressableRow
                 style={[styles.keyOption, !key && { backgroundColor: colors.bgTertiary }]}
@@ -889,8 +897,10 @@ export default function SongDetailScreen({ navigation, route }) {
 
       {/* Practice Modal */}
       <Modal visible={showPracticeModal} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setShowPracticeModal(false)}>
+        {/* Bottom sheet with two inputs — lift it above the keyboard. */}
+        <KeyboardAvoidingView behavior="padding" style={{ flex: 1 }}>
         <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowPracticeModal(false)} accessibilityRole="button" accessibilityLabel="Dismiss practice modal">
-          <View style={[styles.practiceModalContent, { backgroundColor: colors.modalBg }]} onStartShouldSetResponder={() => true} accessibilityViewIsModal>
+          <View style={[styles.practiceModalContent, { backgroundColor: colors.modalBg, paddingBottom: Math.max(insets.bottom, 20) + 20 }]} onStartShouldSetResponder={() => true} accessibilityViewIsModal>
             <Text style={[styles.practiceModalTitle, { color: colors.textPrimary }]} accessibilityRole="header">Log Practice</Text>
             <Text style={[styles.practiceModalSong, { color: colors.textSecondary }]}>
               {song?.title}
@@ -945,6 +955,7 @@ export default function SongDetailScreen({ navigation, route }) {
             </View>
           </View>
         </TouchableOpacity>
+        </KeyboardAvoidingView>
       </Modal>
     </ScrollView>
   );

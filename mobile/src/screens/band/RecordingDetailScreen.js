@@ -10,9 +10,9 @@ import {
   Alert,
   ActivityIndicator,
   StyleSheet,
-  KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { Audio } from 'expo-av';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import * as DocumentPicker from 'expo-document-picker';
@@ -23,6 +23,7 @@ import formatDate from '../../utils/formatDate';
 import PressableRow from '../../components/PressableRow';
 import api from '../../services/api';
 import { useLayout } from '../../hooks/useLayout';
+import { useDiscardChangesGuard } from '../../hooks/useDiscardChangesGuard';
 import { broadcastAudioPlay, subscribeAudioPause } from '../../utils/audioPlaybackCoordinator';
 
 // Wraps expo-video's VideoView so the useVideoPlayer hook is called only when
@@ -335,16 +336,23 @@ export default function RecordingDetailScreen({ navigation, route }) {
     }
   }, [title, description, songId, fileUri, fileName, fileMimeType, isNew, workspaceId, recordingId, recording, navigation, populateForm]);
 
+  // Back gesture / button while editing would silently drop the form.
+  const { leave: leaveWithoutPrompt } = useDiscardChangesGuard(navigation, {
+    active: editing,
+    resetKey: recording,
+    values: [title, description, songId, selectedSong, fileUri],
+  });
+
   const handleCancel = useCallback(() => {
     if (isNew) {
-      navigation.goBack();
+      leaveWithoutPrompt(() => navigation.goBack());
     } else {
       populateForm(recording);
       setFileUri(null);
       setFileName(null);
       setEditing(false);
     }
-  }, [isNew, recording, navigation, populateForm]);
+  }, [isNew, recording, navigation, populateForm, leaveWithoutPrompt]);
 
   const handleDelete = useCallback(() => {
     Alert.alert('Delete Recording', `Delete "${recording?.title}"?`, [
@@ -378,10 +386,10 @@ export default function RecordingDetailScreen({ navigation, route }) {
     return (
       <KeyboardAvoidingView
         style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? headerHeight : 0}
+        behavior="padding"
+        keyboardVerticalOffset={headerHeight}
       >
-        <ScrollView contentContainerStyle={[styles.formContent, isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
+        <ScrollView contentContainerStyle={[styles.formContent, { paddingBottom: insets.bottom + 40 }, isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
           <Text style={[styles.label, { color: colors.textSecondary }]}>Title *</Text>
           <TextInput
             style={[styles.input, { backgroundColor: colors.bgTertiary, color: colors.textPrimary, borderColor: colors.border }]}
@@ -518,7 +526,7 @@ export default function RecordingDetailScreen({ navigation, route }) {
   return (
     <ScrollView
       style={[styles.container, { backgroundColor: colors.bgPrimary }]}
-      contentContainerStyle={[styles.viewContent, isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]}
+      contentContainerStyle={[styles.viewContent, { paddingBottom: insets.bottom + 16 }, isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]}
     >
       <TypeBadge type={recording.type} />
 

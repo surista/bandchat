@@ -1,6 +1,6 @@
 import 'react-native-gesture-handler';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { AppState, Linking, Text, TextInput, Platform, UIManager } from 'react-native';
 import * as ScreenOrientation from 'expo-screen-orientation';
 import { isLargeScreenDevice } from './src/utils/isLargeScreenDevice';
@@ -41,6 +41,7 @@ import { StatusBar } from 'expo-status-bar';
 import * as NavigationBar from 'expo-navigation-bar';
 import { NavigationContainer } from '@react-navigation/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { KeyboardProvider } from 'react-native-keyboard-controller';
 import * as QuickActions from 'expo-quick-actions';
 import { ShareIntentProvider, useShareIntent } from 'expo-share-intent';
 import { ThemeProvider, useTheme } from './src/context/ThemeContext';
@@ -58,6 +59,13 @@ import { useSocket } from './src/context/SocketContext';
 import notificationService from './src/services/notifications';
 import api from './src/services/api';
 import { updateWidgetGigData } from './src/services/widgetService';
+
+// Routes rendered with headerShown: false (AuthStack + AppStack). Live Mode and
+// Lyrics hide the status bar themselves.
+const HEADERLESS_ROUTES = new Set([
+  'Login', 'Signup', 'ForgotPassword',
+  'WorkspaceList', 'OnboardingWizard', 'ShareReceive',
+]);
 
 // Validate UUID format (v4 UUIDs used by the app)
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -220,13 +228,27 @@ function AppContent() {
   const { mode, colors } = useTheme();
   const { hasShareIntent, shareIntent } = useShareIntent();
 
-  // Sync Android navigation bar color with theme
+  const { isLocked } = useAuth();
+  // Screens with no navigation header draw their own bgPrimary behind the
+  // status bar, so the icon style must follow the page background there —
+  // following the (sidebar-coloured) header gave white-on-white icons on
+  // light themes.
+  const [headerlessRoute, setHeaderlessRoute] = useState(true);
+  const syncHeaderlessRoute = () => {
+    const name = navigationRef.current?.getCurrentRoute?.()?.name;
+    setHeaderlessRoute(!name || HEADERLESS_ROUTES.has(name));
+  };
+  const statusBarStyle = (headerlessRoute || isLocked)
+    ? (mode === 'dark' ? 'light' : 'dark')
+    : (colors.isLightHeader ? 'dark' : 'light');
+
+  // Android navigation bar icons follow the theme. (Its background colour
+  // can't be set under edge-to-edge — the app draws behind it.)
   useEffect(() => {
     if (Platform.OS === 'android') {
-      NavigationBar.setBackgroundColorAsync(colors.bgPrimary).catch(() => {});
       NavigationBar.setButtonStyleAsync(mode === 'dark' ? 'light' : 'dark').catch(() => {});
     }
-  }, [mode, colors.bgPrimary]);
+  }, [mode]);
 
   // Handle share intent - navigate to ShareReceive screen
   useEffect(() => {
@@ -353,7 +375,7 @@ function AppContent() {
   };
 
   return (
-    <NavigationContainer ref={navigationRef} linking={linking}>
+    <NavigationContainer ref={navigationRef} linking={linking} onReady={syncHeaderlessRoute} onStateChange={syncHeaderlessRoute}>
       {/* PreferencesSync sits outside ToastProvider — it never raises toasts,
           so re-renders of the toast tree shouldn't cause it to unmount. */}
       <PreferencesSync />
@@ -363,7 +385,7 @@ function AppContent() {
         {/* Self-guards on isAuthenticated, so this is a no-op while the user
             is still on Login / Signup / BiometricLock. */}
         <WhatsNewModal />
-        <StatusBar style={colors.isLightHeader ? 'dark' : 'light'} backgroundColor="transparent" translucent />
+        <StatusBar style={statusBarStyle} />
       </ToastProvider>
     </NavigationContainer>
   );
@@ -372,6 +394,10 @@ function AppContent() {
 export default function App() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
+      {/* Keyboard avoidance for every KeyboardAvoidingView in the app. Needed
+          on Android because edge-to-edge (forced on Android 15+) stops the
+          window resizing for the keyboard, including inside Modals. */}
+      <KeyboardProvider>
       <ShareIntentProvider>
         <ErrorBoundary>
           <SafeAreaProvider>
@@ -387,6 +413,7 @@ export default function App() {
           </SafeAreaProvider>
         </ErrorBoundary>
       </ShareIntentProvider>
+      </KeyboardProvider>
     </GestureHandlerRootView>
   );
 }

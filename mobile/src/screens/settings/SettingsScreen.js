@@ -10,9 +10,9 @@ import {
   ActivityIndicator,
   Linking,
   StyleSheet,
-  KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 // ActionSheetIOS is iOS-only; import conditionally to avoid Android crash
 const ActionSheetIOS = Platform.OS === 'ios' ? require('react-native').ActionSheetIOS : null;
 import { File, Paths } from 'expo-file-system/next';
@@ -32,6 +32,7 @@ import api from '../../services/api';
 import { APP_BASE_URL } from '../../utils/constants';
 import PressableRow from '../../components/PressableRow';
 import WhatsNewModal from '../../components/WhatsNewModal';
+import ActionSheet from '../../components/ActionSheet';
 import { useLayout } from '../../hooks/useLayout';
 
 const CURRENCIES = ['USD', 'GBP', 'EUR', 'JPY', 'AUD', 'CAD', 'NZD', 'CHF', 'ZAR'];
@@ -89,6 +90,7 @@ export default function SettingsScreen({ navigation, route }) {
   const [wsAvatarUrl, setWsAvatarUrl] = useState(null);
   const [uploadingWsAvatar, setUploadingWsAvatar] = useState(false);
   const [showAboutModal, setShowAboutModal] = useState(false);
+  const [showDensitySheet, setShowDensitySheet] = useState(false);
 
   // Workspace defaults state
   const [showDefaultsModal, setShowDefaultsModal] = useState(false);
@@ -215,10 +217,14 @@ export default function SettingsScreen({ navigation, route }) {
     } finally {
       setSavingDefaults(false);
     }
-  }, [workspaceId, wsCurrency, wsEventType, wsStartTime, wsEndTime, wsVenue]);
+  }, [workspaceId, wsCurrency, wsEventType, wsStartTime, wsEndTime, wsVenue, wsTransitionPadding, toast]);
 
   const handlePickWsAvatar = useCallback(async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    // Android's system photo picker (used by launchImageLibraryAsync on 13+)
+    // needs no permission — gating on it blocked users who'd denied access.
+    const { status } = Platform.OS === 'android'
+      ? { status: 'granted' }
+      : await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
       Alert.alert(
         'Permission Required',
@@ -358,14 +364,10 @@ export default function SettingsScreen({ navigation, route }) {
           <SettingsRow
             icon="options-outline"
             label={`Message Density (${messageDensity.charAt(0).toUpperCase() + messageDensity.slice(1)})`}
-            onPress={() => {
-              Alert.alert('Message Density', 'Choose how much space messages take up.', [
-                { text: 'Comfortable', onPress: () => setMessageDensity('comfortable') },
-                { text: 'Default', onPress: () => setMessageDensity('default') },
-                { text: 'Compact', onPress: () => setMessageDensity('compact') },
-                { text: 'Cancel', style: 'cancel' },
-              ]);
-            }}
+            // ActionSheet, not Alert: Android's Alert keeps only the first 3
+            // buttons, which silently dropped Cancel (and alerts aren't
+            // back-dismissable), trapping the user until they picked one.
+            onPress={() => setShowDensitySheet(true)}
             colors={colors}
           />
           <View style={[styles.separator, { backgroundColor: colors.border }]} />
@@ -608,7 +610,7 @@ export default function SettingsScreen({ navigation, route }) {
 
       {/* Rename Workspace Modal */}
       <Modal visible={showRenameModal} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setShowRenameModal(false)}>
-        <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <KeyboardAvoidingView style={styles.modalOverlay} behavior="padding">
           <View style={[styles.modalContent, { backgroundColor: colors.modalBg }]} accessibilityViewIsModal>
             <Text style={[styles.modalTitle, { color: colors.textPrimary }]} maxFontSizeMultiplier={1.6}>Rename Workspace</Text>
             <TextInput
@@ -650,7 +652,7 @@ export default function SettingsScreen({ navigation, route }) {
 
       {/* Delete Workspace Confirmation Modal */}
       <Modal visible={showDeleteModal} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setShowDeleteModal(false)}>
-        <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <KeyboardAvoidingView style={styles.modalOverlay} behavior="padding">
           <View style={[styles.modalContent, { backgroundColor: colors.modalBg }]} accessibilityViewIsModal>
             <Text style={[styles.modalTitle, { color: colors.textPrimary }]} maxFontSizeMultiplier={1.6}>Delete Workspace</Text>
             <Text style={[styles.modalDesc, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>
@@ -695,8 +697,12 @@ export default function SettingsScreen({ navigation, route }) {
 
       {/* Workspace Defaults Modal */}
       <Modal visible={showDefaultsModal} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setShowDefaultsModal(false)}>
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { backgroundColor: colors.modalBg }]} accessibilityViewIsModal>
+        {/* Tall form: scroll inside the card and lift above the keyboard, so
+            the Venue field and Save button stay reachable (and large text
+            doesn't push them off-screen). */}
+        <KeyboardAvoidingView style={styles.modalOverlay} behavior="padding">
+          <View style={[styles.modalContent, { backgroundColor: colors.modalBg, maxHeight: '100%', padding: 0 }]} accessibilityViewIsModal>
+            <ScrollView contentContainerStyle={{ padding: 24 }} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
             <Text style={[styles.modalTitle, { color: colors.textPrimary }]} maxFontSizeMultiplier={1.6}>Workspace Defaults</Text>
 
             {/* Currency */}
@@ -822,10 +828,21 @@ export default function SettingsScreen({ navigation, route }) {
                 )}
               </TouchableOpacity>
             </View>
+            </ScrollView>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
 
+      <ActionSheet
+        visible={showDensitySheet}
+        title="Message Density"
+        actions={[
+          { label: 'Comfortable', onPress: () => setMessageDensity('comfortable') },
+          { label: 'Default', onPress: () => setMessageDensity('default') },
+          { label: 'Compact', onPress: () => setMessageDensity('compact') },
+        ]}
+        onClose={() => setShowDensitySheet(false)}
+      />
       <WhatsNewModal
         mode="manual"
         visible={showAboutModal}

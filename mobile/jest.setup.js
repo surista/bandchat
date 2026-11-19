@@ -9,3 +9,6 @@ jest.mock('expo-modules-core', () => ({
   NativeModule: class {},
   EventEmitter: class { addListener() {} removeAllListeners() {} },
 }));
+
+// Native keyboard module — use the library's own mock.
+jest.mock('react-native-keyboard-controller', () => require('react-native-keyboard-controller/jest'));

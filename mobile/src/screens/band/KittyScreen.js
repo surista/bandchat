@@ -11,11 +11,13 @@ import {
   ActivityIndicator,
   RefreshControl,
   StyleSheet,
-  KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useHeaderHeight } from '@react-navigation/elements';
+import { usePreventRemove } from '@react-navigation/native';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import ActionSheet from '../../components/ActionSheet';
@@ -71,6 +73,7 @@ export default function KittyScreen({ navigation, route }) {
   const { user } = useAuth()
   const { isTablet, contentMaxWidth } = useLayout();
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
   const headerHeight = useHeaderHeight();
 
   const [kitty, setKitty] = useState(null);
@@ -174,6 +177,15 @@ export default function KittyScreen({ navigation, route }) {
     setTxDescription('');
     setTxCategory('studio');
   }, []);
+
+  // The add/edit form is a sub-view of this screen, not its own route, so
+  // back (Android button/gesture, iOS swipe) used to pop the whole screen and
+  // lose the form. Treat back as Cancel while the form is open.
+  usePreventRemove(showForm, () => {
+    setShowForm(false);
+    resetForm();
+  });
+
 
   const filteredTransactions = useMemo(() => {
     const txs = kitty?.transactions || [];
@@ -380,8 +392,8 @@ export default function KittyScreen({ navigation, route }) {
     return (
       <KeyboardAvoidingView
         style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? headerHeight : 0}
+        behavior="padding"
+        keyboardVerticalOffset={headerHeight}
       >
         <ScrollView contentContainerStyle={[styles.formContent, isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]} keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}>
           <Text style={[styles.formTitle, { color: colors.textPrimary }]}>
@@ -465,7 +477,7 @@ export default function KittyScreen({ navigation, route }) {
         {/* Type Picker */}
         <Modal visible={showTypePicker} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setShowTypePicker(false)}>
           <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowTypePicker(false)} accessibilityRole="button" accessibilityLabel="Close type picker">
-            <View style={[styles.pickerContent, { backgroundColor: colors.modalBg }]} accessibilityViewIsModal>
+            <View style={[styles.pickerContent, { backgroundColor: colors.modalBg, paddingBottom: Math.max(insets.bottom, 20) + 20 }]} accessibilityViewIsModal>
               <Text style={[styles.pickerTitle, { color: colors.textPrimary }]} accessibilityRole="header">Transaction Type</Text>
               {TRANSACTION_TYPES.map(t => (
                 <PressableRow
@@ -487,7 +499,7 @@ export default function KittyScreen({ navigation, route }) {
         {/* Category Picker */}
         <Modal visible={showCategoryPicker} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setShowCategoryPicker(false)}>
           <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowCategoryPicker(false)} accessibilityRole="button" accessibilityLabel="Close category picker">
-            <View style={[styles.pickerContent, { backgroundColor: colors.modalBg }]} accessibilityViewIsModal>
+            <View style={[styles.pickerContent, { backgroundColor: colors.modalBg, paddingBottom: Math.max(insets.bottom, 20) + 20 }]} accessibilityViewIsModal>
               <Text style={[styles.pickerTitle, { color: colors.textPrimary }]} accessibilityRole="header">Expense Category</Text>
               {EXPENSE_CATEGORIES.map(c => (
                 <PressableRow

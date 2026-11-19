@@ -10,9 +10,9 @@ import {
   Linking,
   Switch,
   StyleSheet,
-  KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
@@ -231,7 +231,11 @@ export default function WebsiteSettingsScreen({ route }) {
   // checked photo-library permission first (unlike EditProfileScreen's own
   // avatar picker), so a denial silently no-op'd with no feedback.
   const pickAndUploadImage = useCallback(async ({ setUrl, setUploading, filename, errorMessage }) => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    // Android's system photo picker (used by launchImageLibraryAsync on 13+)
+    // needs no permission — gating on it blocked users who'd denied access.
+    const { status } = Platform.OS === 'android'
+      ? { status: 'granted' }
+      : await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
       Alert.alert(
         'Permission Required',
@@ -326,7 +330,7 @@ export default function WebsiteSettingsScreen({ route }) {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }]} edges={['bottom']}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={Platform.OS === 'ios' ? headerHeight : 0} style={{ flex: 1 }}>
+      <KeyboardAvoidingView behavior="padding" keyboardVerticalOffset={headerHeight} style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={[styles.content, isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]} keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}>
           {/* Status card */}
           {isDeployed && (

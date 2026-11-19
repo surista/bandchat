@@ -13,6 +13,7 @@ import {
   Linking,
   Platform,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Clipboard from 'expo-clipboard';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { format, parseISO } from 'date-fns';
@@ -94,6 +95,7 @@ function formatTimeRange(date, endDate) {
 export default function GigListScreen({ navigation, route }) {
   const { workspaceId } = route.params;
   const { colors, mode } = useTheme();
+  const insets = useSafeAreaInsets();
   const { isTablet, contentMaxWidth } = useLayout();
   const { user } = useAuth();
   const toast = useToast();
@@ -656,7 +658,7 @@ export default function GigListScreen({ navigation, route }) {
           accessibilityRole="button"
           accessibilityLabel="Close calendar subscribe modal"
         >
-          <View style={[styles.actionSheet, { backgroundColor: colors.modalBg }]} accessibilityViewIsModal>
+          <View style={[styles.actionSheet, { backgroundColor: colors.modalBg, paddingBottom: Math.max(insets.bottom, 20) + 20 }]} accessibilityViewIsModal>
             <View style={[styles.actionHandle, { backgroundColor: colors.border }]} />
             <Text style={[styles.actionTitle, { color: colors.textPrimary }]} maxFontSizeMultiplier={1.6}>Subscribe to Calendar</Text>
             <Text style={[styles.calendarDesc, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>
@@ -683,7 +685,13 @@ export default function GigListScreen({ navigation, route }) {
               style={[styles.calendarActionButton, { backgroundColor: colors.bgTertiary, marginTop: 8 }]}
               onPress={() => {
                 const webcalUrl = calendarUrl.replace(/^https?:\/\//, 'webcal://');
-                Linking.openURL(webcalUrl).catch(() => {
+                // Android has no system webcal:// handler (Google Calendar
+                // doesn't register one), so this always failed there. Google
+                // Calendar's subscribe-by-URL page does the same job.
+                const target = Platform.OS === 'android'
+                  ? `https://calendar.google.com/calendar/r?cid=${encodeURIComponent(webcalUrl)}`
+                  : webcalUrl;
+                Linking.openURL(target).catch(() => {
                   Alert.alert('Error', 'Could not open calendar app');
                 });
               }}
@@ -713,7 +721,7 @@ export default function GigListScreen({ navigation, route }) {
           accessibilityRole="button"
           accessibilityLabel="Close action sheet"
         >
-          <View style={[styles.actionSheet, { backgroundColor: colors.modalBg }]} accessibilityViewIsModal>
+          <View style={[styles.actionSheet, { backgroundColor: colors.modalBg, paddingBottom: Math.max(insets.bottom, 20) + 20 }]} accessibilityViewIsModal>
             <View style={[styles.actionHandle, { backgroundColor: colors.border }]} />
             <Text style={[styles.actionTitle, { color: colors.textPrimary }]} numberOfLines={1} maxFontSizeMultiplier={1.6}>
               {selectedGig?.isLocked && <><Ionicons name="lock-closed" size={14} color={colors.textSecondary} />{' '}</>}
@@ -788,7 +796,7 @@ export default function GigListScreen({ navigation, route }) {
           accessibilityRole="button"
           accessibilityLabel="Close availability modal"
         >
-          <View style={[styles.actionSheet, { backgroundColor: colors.modalBg }]} accessibilityViewIsModal>
+          <View style={[styles.actionSheet, { backgroundColor: colors.modalBg, paddingBottom: Math.max(insets.bottom, 20) + 20 }]} accessibilityViewIsModal>
             <View style={[styles.actionHandle, { backgroundColor: colors.border }]} />
             <Text style={[styles.actionTitle, { color: colors.textPrimary }]} maxFontSizeMultiplier={1.6}>Set Availability</Text>
             <Text style={[styles.availabilityDateLabel, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>

@@ -11,9 +11,9 @@ import {
   ActivityIndicator,
   ScrollView,
   StyleSheet,
-  KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../context/ThemeContext';
 import api from '../../services/api';
@@ -913,7 +913,7 @@ export default function SetlistDetailScreen({ navigation, route }) {
       {/* Edit Details Modal */}
       <Modal visible={showEditDetails} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setShowEditDetails(false)}>
         <View style={styles.detailsOverlay}>
-          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+          <KeyboardAvoidingView behavior="padding">
             <View style={[styles.detailsContent, { backgroundColor: colors.modalBg }]} accessibilityViewIsModal>
               <Text style={[styles.detailsTitle, { color: colors.textPrimary }]} accessibilityRole="header" maxFontSizeMultiplier={1.6}>Edit Details</Text>
               <Text style={[styles.detailsLabel, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>Name</Text>

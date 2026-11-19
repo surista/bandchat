@@ -38,7 +38,7 @@ export default {
     name: 'BandChat',
     slug: 'bandchat',
     scheme: 'bandchat',
-    version: '1.07.78',
+    version: '1.07.79',
     // 'default' (not 'portrait') so the Android manifest doesn't ship
     // screenOrientation="PORTRAIT" — Android 16 force-ignores that on
     // tablets/foldables anyway and Google Play flags it as a recommended
@@ -61,7 +61,7 @@ export default {
     ios: {
       supportsTablet: true,
       bundleIdentifier: 'com.bandchat.mobile',
-      buildNumber: '10778',
+      buildNumber: '10779',
       associatedDomains: ['applinks:bandchat.vercel.app'],
       entitlements: {
         'com.apple.security.application-groups': ['group.com.bandchat.manager.mobile'],
@@ -87,8 +87,18 @@ export default {
     },
     android: {
       package: 'com.bandchat.mobile',
+      // Firebase config for Android push (FCM). Without it Expo can't issue an
+      // Android push token and every Android push silently never registers.
+      // GOOGLE_SERVICES_JSON (an EAS file env var) takes precedence; otherwise
+      // the committed mobile/google-services.json. Omitted when neither exists
+      // so builds still succeed (just without Android push).
+      ...((() => {
+        const file = process.env.GOOGLE_SERVICES_JSON
+          || (fs.existsSync(path.join(__dirname, 'google-services.json')) ? './google-services.json' : null);
+        return file ? { googleServicesFile: file } : {};
+      })()),
       softwareKeyboardLayoutMode: 'resize',
-      versionCode: 10778,
+      versionCode: 10779,
       allowBackup: false,
       predictiveBackGestureEnabled: true,
       adaptiveIcon: {
@@ -182,6 +192,11 @@ export default {
             NSExtensionActivationSupportsImageWithMaxCount: 10,
             NSExtensionActivationSupportsMovieWithMaxCount: 0,
           },
+          // Match iOS: images only. Without these the plugin defaults Android
+          // to text/* — BandChat showed up for links/text (and did nothing,
+          // since ShareReceiveScreen only handles images) but never for photos.
+          androidIntentFilters: ['image/*'],
+          androidMultiIntentFilters: ['image/*'],
         },
       ],
       [

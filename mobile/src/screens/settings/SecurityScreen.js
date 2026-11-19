@@ -12,8 +12,8 @@ import {
   Switch,
   Share,
   Platform,
-  KeyboardAvoidingView,
 } from 'react-native';
+import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { File, Paths } from 'expo-file-system/next';
 import * as Sharing from 'expo-sharing';
 import * as LocalAuthentication from 'expo-local-authentication';
@@ -64,10 +64,15 @@ export default function SecurityScreen() {
         const types = await LocalAuthentication.supportedAuthenticationTypesAsync();
         const hasFaceId = types.includes(LocalAuthentication.AuthenticationType.FACIAL_RECOGNITION);
         const hasFingerprint = types.includes(LocalAuthentication.AuthenticationType.FINGERPRINT);
-        if (hasFaceId) {
+        if (Platform.OS !== 'ios') {
+          // "Face ID" / "Touch ID" are Apple names. Android devices often
+          // report both face and fingerprint, and the system prompt lets the
+          // user pick, so use the neutral term.
+          setBiometricLabel('Biometric Unlock');
+        } else if (hasFaceId) {
           setBiometricLabel('Face ID');
         } else if (hasFingerprint) {
-          setBiometricLabel(Platform.OS === 'ios' ? 'Touch ID' : 'Biometric Unlock');
+          setBiometricLabel('Touch ID');
         }
       } catch {
         // No biometrics available
@@ -138,7 +143,7 @@ export default function SecurityScreen() {
       if (value) {
         // Verify biometric works before enabling
         const result = await LocalAuthentication.authenticateAsync({
-          promptMessage: `Confirm ${biometricLabel}`,
+          promptMessage: Platform.OS === 'ios' ? `Confirm ${biometricLabel}` : 'Confirm it’s you',
           disableDeviceFallback: true,
           cancelLabel: 'Cancel',
         });
@@ -231,7 +236,7 @@ export default function SecurityScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]} edges={['bottom']}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={Platform.OS === 'ios' ? headerHeight : 0} style={{ flex: 1 }}>
+      <KeyboardAvoidingView behavior="padding" keyboardVerticalOffset={headerHeight} style={{ flex: 1 }}>
       <ScrollView contentContainerStyle={[styles.content, isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]} keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}>
         {/* Change Password */}
         {hasPassword && (
@@ -381,7 +386,7 @@ export default function SecurityScreen() {
                 <View style={styles.biometricInfo}>
                   <Text style={[styles.biometricTitle, { color: colors.textPrimary }]}>{biometricLabel}</Text>
                   <Text style={[styles.biometricDesc, { color: colors.textSecondary }]}>
-                    Require {biometricLabel} to unlock BandChat
+                    {Platform.OS === 'ios' ? `Require ${biometricLabel} to unlock BandChat` : 'Require your fingerprint or face to unlock BandChat'}
                   </Text>
                 </View>
                 {togglingBiometric ? (
@@ -455,7 +460,7 @@ export default function SecurityScreen() {
 
       {/* Change Email Modal */}
       <Modal visible={showEmailModal} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setShowEmailModal(false)}>
-        <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <KeyboardAvoidingView style={styles.modalOverlay} behavior="padding">
           <View style={[styles.modalContent, { backgroundColor: colors.modalBg }]} accessibilityViewIsModal>
             <Text style={[styles.modalTitle, { color: colors.textPrimary }]} accessibilityRole="header">Change Email</Text>
             <Text style={[styles.modalDesc, { color: colors.textSecondary }]}>
@@ -515,7 +520,7 @@ export default function SecurityScreen() {
       </Modal>
       {/* Delete Account Modal */}
       <Modal visible={showDeleteModal} transparent animationType="fade" statusBarTranslucent onRequestClose={() => { setShowDeleteModal(false); setDeletePassword(''); }}>
-        <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <KeyboardAvoidingView style={styles.modalOverlay} behavior="padding">
           <View style={[styles.modalContent, { backgroundColor: colors.modalBg }]} accessibilityViewIsModal>
             <Text style={[styles.modalTitle, { color: '#ef4444' }]} accessibilityRole="header">Delete Account</Text>
             <Text style={[styles.modalDesc, { color: colors.textSecondary }]}>

@@ -12,8 +12,8 @@ import {
   Alert,
   Platform,
   StyleSheet,
-  KeyboardAvoidingView,
 } from 'react-native';
+import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
@@ -200,7 +200,7 @@ export default function WorkspaceListScreen({ navigation, route }) {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }]}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
+      <KeyboardAvoidingView behavior="padding" style={{ flex: 1 }}>
       {/* Header */}
       <View style={[styles.header, { backgroundColor: colors.sidebar }]}>
         <View>
@@ -272,7 +272,7 @@ export default function WorkspaceListScreen({ navigation, route }) {
 
       {/* Join Workspace Modal */}
       <Modal visible={showJoin} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setShowJoin(false)}>
-        <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <KeyboardAvoidingView style={styles.modalOverlay} behavior="padding">
           <View style={[styles.modalContent, { backgroundColor: colors.modalBg }]} accessibilityViewIsModal>
             <Text style={[styles.modalTitle, { color: colors.textPrimary }]} accessibilityRole="header">Join a Workspace</Text>
             <Text style={[styles.modalLabel, { color: colors.textSecondary }]}>Invite Code</Text>

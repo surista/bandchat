@@ -4,12 +4,12 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  KeyboardAvoidingView,
   Platform,
   ScrollView,
   ActivityIndicator,
   StyleSheet,
 } from 'react-native';
+import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../../context/ThemeContext';
 import api from '../../services/api';
@@ -41,7 +41,7 @@ export default function ForgotPasswordScreen({ navigation }) {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.sidebar }, isTablet && styles.tabletContainer]}>
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior="padding"
         style={styles.flex}
       >
         <ScrollView

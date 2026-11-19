@@ -7,7 +7,9 @@ import {
   StyleSheet,
   Image,
   RefreshControl,
+  Platform,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
 import { useToast } from '../../context/ToastContext';
@@ -36,6 +38,7 @@ const ICONS = {
 export default function ActivityScreen({ navigation, route }) {
   const { workspaceId } = route.params;
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
   const { isTablet, contentMaxWidth } = useLayout();
   const toast = useToast();
 
@@ -165,8 +168,10 @@ export default function ActivityScreen({ navigation, route }) {
         keyExtractor={(item) => item.id}
         renderItem={renderItem}
         contentInsetAdjustmentBehavior="automatic"
-        contentContainerStyle={[styles.list, isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />}
+        // iOS gets the bottom inset from contentInsetAdjustmentBehavior; Android
+        // (edge-to-edge) needs it explicitly or the last row sits under the nav bar.
+        contentContainerStyle={[styles.list, Platform.OS === 'android' && { paddingBottom: insets.bottom + 12 }, isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} colors={[colors.primary]} progressBackgroundColor={colors.bgSecondary} />}
         ListEmptyComponent={
           <View style={styles.emptyState}>
             <Ionicons name="notifications-off-outline" size={48} color={colors.textSecondary} />

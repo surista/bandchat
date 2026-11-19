@@ -10,10 +10,10 @@ import {
   Alert,
   ActivityIndicator,
   RefreshControl,
-  KeyboardAvoidingView,
   Platform,
   StyleSheet,
 } from 'react-native';
+import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { formatDistanceToNow, parseISO } from 'date-fns';
 import { useTheme } from '../../context/ThemeContext';
@@ -435,7 +435,7 @@ export default function PollsScreen({ navigation, route }) {
 
       {/* Create Modal */}
       <Modal visible={showCreate} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setShowCreate(false)}>
-        <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <KeyboardAvoidingView style={styles.modalOverlay} behavior="padding">
           <View style={[styles.modalContent, { backgroundColor: colors.modalBg }]} accessibilityViewIsModal>
             <ScrollView showsVerticalScrollIndicator={false} keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}>
               <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>Create Poll</Text>

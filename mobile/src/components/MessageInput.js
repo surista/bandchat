@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
-import { View, TextInput, TouchableOpacity, Text, Image, StyleSheet, Platform, Animated, PanResponder, Alert, FlatList, ScrollView, Linking } from 'react-native';
+import { View, TextInput, TouchableOpacity, Text, Image, StyleSheet, Platform, Animated, PanResponder, Alert, FlatList, ScrollView, Linking, BackHandler } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { prepareImageForUpload, prepareImagesForUpload } from '../utils/prepareImageUpload';
@@ -59,6 +59,7 @@ export default function MessageInput({ onSend, onSendVoice, onTyping, editingMes
   const recordingRef = useRef(null);
   const durationIntervalRef = useRef(null);
   const stopRecordingRef = useRef(null);
+  const cancelRecordingRef = useRef(null);
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const slideX = useRef(new Animated.Value(0)).current;
   const panStartX = useRef(0);
@@ -81,10 +82,12 @@ export default function MessageInput({ onSend, onSendVoice, onTyping, editingMes
         }
       },
       onPanResponderRelease: (_, gestureState) => {
+        // Via refs: this PanResponder is created once, so direct references
+        // would be the first render's closures.
         if (gestureState.dx < -100) {
-          cancelRecording();
+          cancelRecordingRef.current?.();
         } else {
-          stopRecording();
+          stopRecordingRef.current?.();
         }
         slideX.setValue(0);
       },
@@ -598,6 +601,18 @@ export default function MessageInput({ onSend, onSendVoice, onTyping, editingMes
       setRecordingDuration(0);
     }
   }, []);
+  cancelRecordingRef.current = cancelRecording;
+
+  // Android back while recording discards the recording instead of leaving
+  // the channel (the unmount cleanup would otherwise drop it silently).
+  useEffect(() => {
+    if (!isRecording) return;
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      cancelRecording();
+      return true;
+    });
+    return () => sub.remove();
+  }, [isRecording, cancelRecording]);
 
   const formatDuration = (seconds) => formatRecordingDuration(seconds) || '0:00';
 
@@ -625,6 +640,16 @@ export default function MessageInput({ onSend, onSendVoice, onTyping, editingMes
           ]}
           {...panResponder.panHandlers}
         >
+          {/* Explicit cancel — slide-to-cancel alone collides with the Android
+              back gesture (a left swipe from the right edge). */}
+          <TouchableOpacity
+            onPress={cancelRecording}
+            style={styles.recordingAction}
+            accessibilityRole="button"
+            accessibilityLabel="Discard voice message"
+          >
+            <Ionicons name="trash-outline" size={22} color="#EF4444" />
+          </TouchableOpacity>
           <View style={styles.recordingLeft}>
             <Animated.View
               style={[
@@ -639,6 +664,14 @@ export default function MessageInput({ onSend, onSendVoice, onTyping, editingMes
           <Text style={[styles.slideToCancel, { color: recordingCancelled ? '#EF4444' : colors.textSecondary }]} maxFontSizeMultiplier={1.5}>
             {recordingCancelled ? 'Release to cancel' : '\u2190 Slide to cancel'}
           </Text>
+          <TouchableOpacity
+            onPress={() => stopRecordingRef.current?.()}
+            style={[styles.recordingAction, styles.recordingSend, { backgroundColor: colors.primary }]}
+            accessibilityRole="button"
+            accessibilityLabel="Send voice message"
+          >
+            <Ionicons name="send" size={18} color={colors.primaryText} />
+          </TouchableOpacity>
         </Animated.View>
       )}
 
@@ -943,12 +976,21 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
   },
   recordingLeft: {
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  recordingAction: {
+    minWidth: MIN_TOUCH_TARGET,
+    minHeight: MIN_TOUCH_TARGET,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  recordingSend: {
+    borderRadius: MIN_TOUCH_TARGET / 2,
   },
   recordingDot: {
     width: 12,

@@ -7,9 +7,9 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   StyleSheet,
-  KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useHeaderHeight } from '@react-navigation/elements';
 import { useTheme } from '../../context/ThemeContext';
@@ -228,7 +228,7 @@ export default function SearchScreen({ navigation, route }) {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]} edges={['bottom']}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={Platform.OS === 'ios' ? headerHeight : 0} style={{ flex: 1 }}>
+      <KeyboardAvoidingView behavior="padding" keyboardVerticalOffset={headerHeight} style={{ flex: 1 }}>
       {/* Search Input */}
       <View style={[styles.searchBar, { backgroundColor: colors.bgSecondary, borderBottomColor: colors.border }]}>
         <Ionicons name="search" size={16} color={colors.textSecondary} style={styles.searchIcon} />

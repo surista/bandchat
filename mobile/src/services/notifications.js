@@ -43,6 +43,62 @@ class NotificationService {
     this.onNotificationTapped = null;
   }
 
+  /**
+   * Create the Android notification channels. Runs before the permission
+   * prompt and independently of push-token registration: channels used to be
+   * created after getExpoPushTokenAsync, so a token failure (e.g. missing
+   * Firebase config) meant they were never created at all.
+   */
+  async ensureAndroidChannels() {
+    if (Platform.OS !== 'android') return;
+    try {
+      // Android notification channels. Distinct vibration patterns per
+      // channel let users feel which notification type came in without
+      // looking — Material Design pattern. `mentions` is the longest/most
+      // attention-grabbing (max importance), `messages` is the standard
+      // short pulse, `events` is a single buzz so a calendar reminder feels
+      // softer than a chat ping, `announcements` is the same as events.
+      if (Platform.OS === 'android') {
+        await Notifications.setNotificationChannelAsync('default', {
+          name: 'BandChat',
+          importance: Notifications.AndroidImportance.HIGH,
+          vibrationPattern: [0, 250, 250, 250],
+          sound: 'default',
+        });
+        await Notifications.setNotificationChannelAsync('messages', {
+          name: 'Messages',
+          description: 'New messages in channels and DMs',
+          importance: Notifications.AndroidImportance.HIGH,
+          vibrationPattern: [0, 250, 150, 250],
+          sound: 'default',
+        });
+        await Notifications.setNotificationChannelAsync('mentions', {
+          name: 'Mentions',
+          description: 'When someone @mentions you',
+          importance: Notifications.AndroidImportance.MAX,
+          vibrationPattern: [0, 400, 120, 400],
+          sound: 'default',
+        });
+        await Notifications.setNotificationChannelAsync('events', {
+          name: 'Events & Reminders',
+          description: 'Gig reminders and calendar updates',
+          importance: Notifications.AndroidImportance.DEFAULT,
+          vibrationPattern: [0, 350],
+          sound: 'default',
+        });
+        await Notifications.setNotificationChannelAsync('announcements', {
+          name: 'Announcements & Polls',
+          description: 'Band announcements and poll notifications',
+          importance: Notifications.AndroidImportance.DEFAULT,
+          vibrationPattern: [0, 350],
+          sound: 'default',
+        });
+      }
+    } catch (err) {
+      console.warn('[push] channel setup failed:', err?.message);
+    }
+  }
+
   async register() {
     // Push tokens only work on physical devices with a native build (not Expo Go)
     if (!Device.isDevice) {
@@ -54,6 +110,8 @@ class NotificationService {
     if (isExpoGo) {
       return null;
     }
+
+    await this.ensureAndroidChannels();
 
     const { status: existingStatus } = await Notifications.getPermissionsAsync();
     let finalStatus = existingStatus;
@@ -105,48 +163,6 @@ class NotificationService {
         });
       }
 
-      // Android notification channels. Distinct vibration patterns per
-      // channel let users feel which notification type came in without
-      // looking — Material Design pattern. `mentions` is the longest/most
-      // attention-grabbing (max importance), `messages` is the standard
-      // short pulse, `events` is a single buzz so a calendar reminder feels
-      // softer than a chat ping, `announcements` is the same as events.
-      if (Platform.OS === 'android') {
-        await Notifications.setNotificationChannelAsync('default', {
-          name: 'BandChat',
-          importance: Notifications.AndroidImportance.HIGH,
-          vibrationPattern: [0, 250, 250, 250],
-          sound: 'default',
-        });
-        await Notifications.setNotificationChannelAsync('messages', {
-          name: 'Messages',
-          description: 'New messages in channels and DMs',
-          importance: Notifications.AndroidImportance.HIGH,
-          vibrationPattern: [0, 250, 150, 250],
-          sound: 'default',
-        });
-        await Notifications.setNotificationChannelAsync('mentions', {
-          name: 'Mentions',
-          description: 'When someone @mentions you',
-          importance: Notifications.AndroidImportance.MAX,
-          vibrationPattern: [0, 400, 120, 400],
-          sound: 'default',
-        });
-        await Notifications.setNotificationChannelAsync('events', {
-          name: 'Events & Reminders',
-          description: 'Gig reminders and calendar updates',
-          importance: Notifications.AndroidImportance.DEFAULT,
-          vibrationPattern: [0, 350],
-          sound: 'default',
-        });
-        await Notifications.setNotificationChannelAsync('announcements', {
-          name: 'Announcements & Polls',
-          description: 'Band announcements and poll notifications',
-          importance: Notifications.AndroidImportance.DEFAULT,
-          vibrationPattern: [0, 350],
-          sound: 'default',
-        });
-      }
 
       return this.expoPushToken;
     } catch (err) {

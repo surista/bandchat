@@ -8,10 +8,10 @@ import {
   Alert,
   ActivityIndicator,
   StyleSheet,
-  KeyboardAvoidingView,
   Platform,
   Linking,
 } from 'react-native';
+import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useHeaderHeight } from '@react-navigation/elements';
@@ -37,7 +37,11 @@ export default function EditProfileScreen({ navigation }) {
   const [fieldErrors, setFieldErrors] = useState({});
 
   const handlePickAvatar = useCallback(async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    // Android's system photo picker (used by launchImageLibraryAsync on 13+)
+    // needs no permission — gating on it blocked users who'd denied access.
+    const { status } = Platform.OS === 'android'
+      ? { status: 'granted' }
+      : await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
       Alert.alert(
         'Permission Required',
@@ -119,7 +123,7 @@ export default function EditProfileScreen({ navigation }) {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]} edges={['bottom']}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={Platform.OS === 'ios' ? headerHeight : 0} style={{ flex: 1 }}>
+      <KeyboardAvoidingView behavior="padding" keyboardVerticalOffset={headerHeight} style={{ flex: 1 }}>
       <ScrollView contentContainerStyle={[styles.content, isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]} keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}>
         {/* Avatar */}
         <TouchableOpacity

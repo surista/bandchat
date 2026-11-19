@@ -9,9 +9,10 @@ import {
   Alert,
   ActivityIndicator,
   StyleSheet,
-  KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useHeaderHeight } from '@react-navigation/elements';
 import { useTheme } from '../../context/ThemeContext';
 import Badge from '../../components/Badge';
@@ -19,11 +20,13 @@ import PressableRow from '../../components/PressableRow';
 import api from '../../services/api';
 import { formatDuration } from '../../utils/formatDuration';
 import { useLayout } from '../../hooks/useLayout';
+import { useDiscardChangesGuard } from '../../hooks/useDiscardChangesGuard';
 
 export default function MedleyDetailScreen({ navigation, route }) {
   const { medleyId, workspaceId, editing: startEditing } = route.params;
   const isNew = !medleyId;
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
   const { isTablet, contentMaxWidth } = useLayout();
   const headerHeight = useHeaderHeight();
 
@@ -148,14 +151,21 @@ export default function MedleyDetailScreen({ navigation, route }) {
     }
   }, [name, description, selectedSongs, isNew, workspaceId, medleyId, navigation, populateForm]);
 
+  // Back gesture / button while editing would silently drop the form.
+  const { leave: leaveWithoutPrompt } = useDiscardChangesGuard(navigation, {
+    active: editing,
+    resetKey: medley,
+    values: [name, description, selectedSongs],
+  });
+
   const handleCancel = useCallback(() => {
     if (isNew) {
-      navigation.goBack();
+      leaveWithoutPrompt(() => navigation.goBack());
     } else {
       populateForm(medley);
       setEditing(false);
     }
-  }, [isNew, medley, navigation, populateForm]);
+  }, [isNew, medley, navigation, populateForm, leaveWithoutPrompt]);
 
   const addSong = useCallback((song) => {
     setSelectedSongs(prev => {
@@ -194,10 +204,10 @@ export default function MedleyDetailScreen({ navigation, route }) {
     return (
       <KeyboardAvoidingView
         style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? headerHeight : 0}
+        behavior="padding"
+        keyboardVerticalOffset={headerHeight}
       >
-        <ScrollView contentContainerStyle={[styles.formContent, isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
+        <ScrollView contentContainerStyle={[styles.formContent, { paddingBottom: insets.bottom + 40 }, isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
           <Text style={[styles.label, { color: colors.textSecondary }]}>Name *</Text>
           <TextInput
             style={[styles.input, { backgroundColor: colors.bgTertiary, color: colors.textPrimary, borderColor: colors.border }]}
@@ -361,7 +371,7 @@ export default function MedleyDetailScreen({ navigation, route }) {
   return (
     <ScrollView
       style={[styles.container, { backgroundColor: colors.bgPrimary }]}
-      contentContainerStyle={[styles.viewContent, isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]}
+      contentContainerStyle={[styles.viewContent, { paddingBottom: insets.bottom + 16 }, isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]}
     >
       {medley.description ? (
         <Text style={[styles.viewDescription, { color: colors.textSecondary }]}>{medley.description}</Text>

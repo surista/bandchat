@@ -9,11 +9,11 @@ import {
   ActivityIndicator,
   Linking,
   StyleSheet,
-  KeyboardAvoidingView,
   Platform,
   Image,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useHeaderHeight } from '@react-navigation/elements';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
@@ -25,6 +25,7 @@ import { isSafeUrl } from '../../utils/urlSafety';
 import { successNotification, mediumImpact } from '../../utils/haptics';
 import api from '../../services/api';
 import { useLayout } from '../../hooks/useLayout';
+import { useDiscardChangesGuard } from '../../hooks/useDiscardChangesGuard';
 import { MIN_TOUCH_TARGET } from '../../utils/touchTarget';
 import ErrorState from '../../components/ErrorState';
 import PressableRow from '../../components/PressableRow';
@@ -34,6 +35,7 @@ export default function VenueDetailScreen({ navigation, route }) {
   const { venueId, workspaceId, isNew } = route.params;
   const { user } = useAuth();
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
   const toast = useToast();
   const { isTablet, contentMaxWidth } = useLayout();
   const headerHeight = useHeaderHeight();
@@ -173,17 +175,28 @@ export default function VenueDetailScreen({ navigation, route }) {
     }
   }, [name, address, city, phone, email, website, capacity, notes, imageUrl, isNew, workspaceId, venueId, navigation, populateForm, toast]);
 
+  // Back gesture / button while editing would silently drop the form.
+  const { leave: leaveWithoutPrompt } = useDiscardChangesGuard(navigation, {
+    active: editing,
+    resetKey: venue,
+    values: [name, address, city, capacity, phone, email, website, notes, imageUrl],
+  });
+
   const handleCancel = useCallback(() => {
     if (isNew) {
-      navigation.goBack();
+      leaveWithoutPrompt(() => navigation.goBack());
     } else {
       populateForm(venue);
       setEditing(false);
     }
-  }, [isNew, venue, navigation, populateForm]);
+  }, [isNew, venue, navigation, populateForm, leaveWithoutPrompt]);
 
   const handlePickImage = useCallback(async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    // Android's system photo picker (used by launchImageLibraryAsync on 13+)
+    // needs no permission — gating on it blocked users who'd denied access.
+    const { status } = Platform.OS === 'android'
+      ? { status: 'granted' }
+      : await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
       Alert.alert(
         'Permission Required',
@@ -286,11 +299,11 @@ export default function VenueDetailScreen({ navigation, route }) {
     return (
       <KeyboardAvoidingView
         style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? headerHeight : 0}
+        behavior="padding"
+        keyboardVerticalOffset={headerHeight}
       >
         <ScrollView
-          contentContainerStyle={[styles.formContent, isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]}
+          contentContainerStyle={[styles.formContent, { paddingBottom: insets.bottom + 40 }, isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
         >
@@ -460,7 +473,7 @@ export default function VenueDetailScreen({ navigation, route }) {
   return (
     <ScrollView
       style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]}
-      contentContainerStyle={[styles.viewContent, isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]}
+      contentContainerStyle={[styles.viewContent, { paddingBottom: insets.bottom + 40 }, isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]}
     >
       {/* Venue image */}
       {venue?.imageUrl && (

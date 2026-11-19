@@ -15,6 +15,7 @@ import {
   StyleSheet,
   LayoutAnimation,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../../context/ThemeContext';
 import { useToast } from '../../context/ToastContext';
@@ -54,6 +55,7 @@ export default function SongListScreen({ navigation, route }) {
   // destructure instead of showing a recoverable error.
   const { workspaceId, workspaceName } = route.params ?? {};
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
   const { isTablet, contentMaxWidth } = useLayout();
   const toast = useToast();
 
@@ -573,7 +575,7 @@ export default function SongListScreen({ navigation, route }) {
           accessibilityRole="button"
           accessibilityLabel="Dismiss sort options"
         >
-          <View style={[styles.sortModalContent, { backgroundColor: colors.modalBg }]} accessibilityViewIsModal>
+          <View style={[styles.sortModalContent, { backgroundColor: colors.modalBg, paddingBottom: Math.max(insets.bottom, 20) + 20 }]} accessibilityViewIsModal>
             <Text style={[styles.sortModalTitle, { color: colors.textPrimary }]} accessibilityRole="header" maxFontSizeMultiplier={1.6}>Sort by</Text>
             {SORT_OPTIONS.map(opt => (
               <PressableRow

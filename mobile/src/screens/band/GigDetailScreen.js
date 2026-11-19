@@ -10,11 +10,12 @@ import {
   ActivityIndicator,
   Linking,
   StyleSheet,
-  KeyboardAvoidingView,
   Platform,
   FlatList,
   Pressable,
 } from 'react-native';
+import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 import { prepareImageForUpload } from '../../utils/prepareImageUpload';
 import * as DocumentPicker from 'expo-document-picker';
@@ -29,6 +30,7 @@ import { useToast } from '../../context/ToastContext';
 import { successNotification, selectionFeedback, errorNotification } from '../../utils/haptics';
 import api from '../../services/api';
 import { useLayout } from '../../hooks/useLayout';
+import { useDiscardChangesGuard } from '../../hooks/useDiscardChangesGuard';
 import ErrorState from '../../components/ErrorState';
 import { SkeletonList } from '../../components/SkeletonLoader';
 import { Image } from 'expo-image';
@@ -58,6 +60,7 @@ export default function GigDetailScreen({ navigation, route }) {
   const { user } = useAuth()
   const { isTablet, contentMaxWidth } = useLayout();
   const { colors, mode } = useTheme();
+  const insets = useSafeAreaInsets();
   const { socket } = useSocket();
   const toast = useToast();
   const headerHeight = useHeaderHeight();
@@ -540,14 +543,21 @@ export default function GigDetailScreen({ navigation, route }) {
     // failed to save when they were the only thing the user changed.
   }, [title, type, status, date, multiDay, endDate, startTime, endTime, soundCheckTime, eventStartTime, performanceStartTime, venue, address, selectedVenueId, pay, notes, isAdmin, isLocked, isNew, isTentative, tentativeChannelIds, workspaceId, gigId, navigation, populateForm]);
 
+  // Back gesture / button while editing would silently drop the form.
+  const { leave: leaveWithoutPrompt } = useDiscardChangesGuard(navigation, {
+    active: editing,
+    resetKey: gig,
+    values: [title, type, status, date, multiDay, endDate, startTime, endTime, soundCheckTime, eventStartTime, performanceStartTime, venue, customVenue, address, selectedVenueId, pay, notes, isLocked, isTentative, tentativeChannelIds],
+  });
+
   const handleCancel = useCallback(() => {
     if (isNew) {
-      navigation.goBack();
+      leaveWithoutPrompt(() => navigation.goBack());
     } else {
       populateForm(gig);
       setEditing(false);
     }
-  }, [isNew, gig, navigation, populateForm]);
+  }, [isNew, gig, navigation, populateForm, leaveWithoutPrompt]);
 
   const handleConfirmGig = useCallback(async () => {
     setConfirmRejectLoading(true);
@@ -694,7 +704,11 @@ export default function GigDetailScreen({ navigation, route }) {
 
   const handleAddPhotos = useCallback(async () => {
     try {
-      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      // Android's system photo picker (used by launchImageLibraryAsync on 13+)
+      // needs no permission — gating on it blocked users who'd denied access.
+      const { status } = Platform.OS === 'android'
+        ? { status: 'granted' }
+        : await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
         Alert.alert(
           'Permission Required',
@@ -830,10 +844,10 @@ export default function GigDetailScreen({ navigation, route }) {
     return (
       <KeyboardAvoidingView
         style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? headerHeight : 0}
+        behavior="padding"
+        keyboardVerticalOffset={headerHeight}
       >
-        <ScrollView contentContainerStyle={[styles.formContent, isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]} keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}>
+        <ScrollView contentContainerStyle={[styles.formContent, { paddingBottom: insets.bottom + 40 }, isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]} keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}>
           <Text style={[styles.label, { color: colors.textSecondary }]}>Title *</Text>
           <TextInput
             style={[styles.input, { backgroundColor: colors.bgTertiary, color: colors.textPrimary, borderColor: fieldErrors.title ? '#ef4444' : colors.border }]}
@@ -1363,13 +1377,13 @@ export default function GigDetailScreen({ navigation, route }) {
   return (
     <KeyboardAvoidingView
       style={[styles.container, { backgroundColor: colors.bgPrimary }]}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? headerHeight : 0}
+      behavior="padding"
+      keyboardVerticalOffset={headerHeight}
     >
     <ScrollView
       ref={viewScrollRef}
       style={[styles.container, { backgroundColor: colors.bgPrimary }]}
-      contentContainerStyle={[styles.viewContent, isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]}
+      contentContainerStyle={[styles.viewContent, { paddingBottom: insets.bottom + 16 }, isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]}
       keyboardShouldPersistTaps="handled"
       keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
       onScroll={(e) => {

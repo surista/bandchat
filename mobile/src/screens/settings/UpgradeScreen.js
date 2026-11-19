@@ -12,12 +12,13 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import Purchases from 'react-native-purchases';
+import Purchases, { PURCHASES_ERROR_CODE } from 'react-native-purchases';
 import { useTheme } from '../../context/ThemeContext';
 import { useToast } from '../../context/ToastContext';
 import api from '../../services/api';
 import { APP_BASE_URL } from '../../utils/constants';
 import { useLayout } from '../../hooks/useLayout';
+import { MIN_TOUCH_TARGET } from '../../utils/touchTarget';
 
 // Product IDs — must match App Store Connect / Google Play Console and RevenueCat dashboard
 const PRODUCT_IDS = {
@@ -95,7 +96,10 @@ export default function UpgradeScreen({ route }) {
       const priceMap = {};
 
       for (const pkg of current.availablePackages) {
-        const productId = pkg.product.identifier;
+        // Google Play subscriptions are reported as "productId:basePlanId"
+        // (e.g. "bandchat_pro_monthly:monthly"); one-time products and all
+        // App Store products are the bare id. Key by the bare id.
+        const productId = pkg.product.identifier.split(':')[0];
         pkgMap[productId] = pkg;
         // RevenueCat provides a pre-formatted price string e.g. "$4.99"
         const priceString = pkg.product.priceString || '';
@@ -150,6 +154,11 @@ export default function UpgradeScreen({ route }) {
       // PurchaseCancelledError has userCancelled = true
       if (err.userCancelled) {
         // User cancelled — no alert needed
+      } else if (err.code === PURCHASES_ERROR_CODE.PAYMENT_PENDING_ERROR) {
+        // Google Play "pending" purchases (slow card checks, cash payment
+        // methods) — not a failure. The RevenueCat webhook activates the plan
+        // once the payment clears.
+        Alert.alert('Payment Pending', 'Your payment is being processed. Pro will unlock for this workspace as soon as it completes.');
       } else {
         Alert.alert('Purchase Failed', err.message || 'Something went wrong. Please try again.');
       }
@@ -186,6 +195,27 @@ export default function UpgradeScreen({ route }) {
   };
 
   const isPro = planData?.effectivePlan === 'PRO';
+  // Only offer "Manage" for a renewing subscription bought on this platform's
+  // store — a Play link is useless for an App Store purchase and vice versa.
+  const canManageSubscription = isPro && !!planData?.planExpiresAt && (
+    (Platform.OS === 'ios' && planData?.planSource === 'APPLE') ||
+    (Platform.OS === 'android' && planData?.planSource === 'GOOGLE')
+  );
+
+  const handleManageSubscription = async () => {
+    try {
+      if (Platform.OS === 'ios') {
+        await Purchases.showManageSubscriptions();
+        return;
+      }
+      const info = await Purchases.getCustomerInfo().catch(() => null);
+      const url = info?.managementURL
+        || 'https://play.google.com/store/account/subscriptions?package=com.bandchat.mobile';
+      await Linking.openURL(url);
+    } catch {
+      toast.error('Could not open subscription settings');
+    }
+  };
 
   if (loading) {
     return (
@@ -290,6 +320,17 @@ export default function UpgradeScreen({ route }) {
             <UsageRow label="Messages" value="90-day history" colors={colors} />
             <UsageRow label="Storage" value="500 MB" colors={colors} />
           </View>
+        )}
+
+        {canManageSubscription && (
+          <TouchableOpacity
+            style={styles.restoreButton}
+            onPress={handleManageSubscription}
+            accessibilityRole="button"
+            accessibilityLabel="Manage subscription"
+          >
+            <Text style={[styles.restoreText, { color: colors.primary }]} maxFontSizeMultiplier={1.5}>Manage Subscription</Text>
+          </TouchableOpacity>
         )}
 
         {/* Restore Purchases */}
@@ -541,6 +582,8 @@ const styles = StyleSheet.create({
   },
   restoreButton: {
     alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: MIN_TOUCH_TARGET,
     paddingVertical: 14,
     marginBottom: 8,
   },

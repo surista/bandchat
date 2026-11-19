@@ -42,8 +42,12 @@ export default function BiometricLockScreen() {
   }, [authenticate]);
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]}>
-      <View style={styles.content}>
+    // The overlay must always cover the whole window — it's what hides the app
+    // while locked. Only the inner content is width-capped on tablets (capping
+    // the absolute-filled container itself pinned it to the left at 500dp and
+    // left the rest of the app visible and tappable).
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }]}>
+      <View style={[styles.content, isTablet && styles.tabletContent]}>
         <Image
           source={require('../../../assets/icon.png')}
           style={styles.icon}
@@ -106,7 +110,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     zIndex: 9999,
   },
-  tabletContainer: { maxWidth: 500, width: '100%', alignSelf: 'center' },
+  tabletContent: { maxWidth: 500, width: '100%' },
   content: {
     alignItems: 'center',
     paddingHorizontal: 40,

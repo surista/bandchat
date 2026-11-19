@@ -10,10 +10,10 @@ import {
   Alert,
   ActivityIndicator,
   RefreshControl,
-  KeyboardAvoidingView,
   Platform,
   StyleSheet,
 } from 'react-native';
+import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { formatDistanceToNow, parseISO } from 'date-fns';
 import { useTheme } from '../../context/ThemeContext';
@@ -332,7 +332,7 @@ export default function AnnouncementsScreen({ navigation, route }) {
 
       {/* Create/Edit Modal */}
       <Modal visible={showModal} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setShowModal(false)}>
-        <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <KeyboardAvoidingView style={styles.modalOverlay} behavior="padding">
           <View style={[styles.modalContent, { backgroundColor: colors.modalBg }]} accessibilityViewIsModal>
             <ScrollView showsVerticalScrollIndicator={false} keyboardDismissMode="on-drag">
               <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>

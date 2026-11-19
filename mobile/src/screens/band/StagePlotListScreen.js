@@ -18,11 +18,13 @@ import api from '../../services/api';
 import ActionSheet from '../../components/ActionSheet';
 import { format } from 'date-fns';
 import { useLayout } from '../../hooks/useLayout';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function StagePlotListScreen({ navigation, route }) {
   const { workspaceId } = route.params;
   const { colors } = useTheme();
   const { isTablet, contentMaxWidth } = useLayout();
+  const insets = useSafeAreaInsets();
   const { user } = useAuth();
 
   const [plots, setPlots] = useState([]);
@@ -179,10 +181,11 @@ export default function StagePlotListScreen({ navigation, route }) {
             keyExtractor={(item) => item.id}
             renderItem={renderItem}
             contentInsetAdjustmentBehavior="automatic"
-            contentContainerStyle={[styles.listContent, isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]}
+            // Room for the FAB + the system nav bar (edge-to-edge on Android).
+            contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 96 }, isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]}
           />
           <TouchableOpacity
-            style={[styles.fab, { backgroundColor: colors.primary }]}
+            style={[styles.fab, { backgroundColor: colors.primary, bottom: insets.bottom + 24 }]}
             onPress={handleCreate}
             activeOpacity={0.8}
             accessibilityRole="button"

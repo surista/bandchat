@@ -8,11 +8,11 @@ import {
   Alert,
   ActivityIndicator,
   BackHandler,
-  KeyboardAvoidingView,
   Platform,
   Share,
   StyleSheet,
 } from 'react-native';
+import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import PressableRow from '../../components/PressableRow';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -114,11 +114,16 @@ export default function OnboardingWizardScreen({ navigation }) {
   // Android hardware back button
   useEffect(() => {
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {
-      handleClose();
+      // Match the on-screen back button: step back before offering to leave.
+      if (step === 'invite') {
+        setStep('channels');
+      } else {
+        handleClose();
+      }
       return true;
     });
     return () => sub.remove();
-  }, [handleClose]);
+  }, [handleClose, step]);
 
   // --- Step 1: Create workspace ---
   const handleCreateWorkspace = useCallback(async () => {
@@ -540,7 +545,7 @@ export default function OnboardingWizardScreen({ navigation }) {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }]}>
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
         {/* Header */}
         <View style={[styles.header, { borderBottomColor: colors.border }]}>
           {showBack ? (

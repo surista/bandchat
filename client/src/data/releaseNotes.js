@@ -16,6 +16,22 @@
 
 export const RELEASE_NOTES = [
   {
+    version: '1.07.79',
+    date: '2026-11-20',
+    items: [
+      { kind: 'fixed', text: 'Android: push notifications now work.' },
+      { kind: 'fixed', text: 'Android: the keyboard no longer covers text fields and buttons in forms and pop-ups, including sign-up, settings and band forms.' },
+      { kind: 'fixed', text: 'Android: buttons and list items are no longer hidden behind the navigation bar.' },
+      { kind: 'fixed', text: 'Android: monthly and annual Pro subscriptions can be purchased, and Pro members can manage their subscription from the app.' },
+      { kind: 'added', text: 'Android: share photos from other apps straight into a BandChat channel.' },
+      { kind: 'added', text: 'Going back while editing an event, song, medley, recording or venue now asks before discarding your changes.' },
+      { kind: 'added', text: 'Voice messages have clear Discard and Send buttons while recording.' },
+      { kind: 'fixed', text: 'Admins can long-press members again to promote, reset passwords or remove them.' },
+      { kind: 'fixed', text: 'Android: "Open in Calendar" subscribes through Google Calendar, and adding gig or venue photos no longer needs photo-library permission.' },
+      { kind: 'changed', text: 'Notification settings now tell you when notifications are switched off in your phone’s settings.' },
+    ],
+  },
+  {
     version: '1.07.78',
     date: '2026-11-20',
     items: [

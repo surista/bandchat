@@ -10,11 +10,11 @@ import {
   ActivityIndicator,
   RefreshControl,
   StyleSheet,
-  KeyboardAvoidingView,
   ScrollView,
   Platform,
   Pressable,
 } from 'react-native';
+import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../../context/ThemeContext';
 import Badge from '../../components/Badge';
@@ -438,7 +438,7 @@ export default function SetlistListScreen({ navigation, route }) {
         >
         <KeyboardAvoidingView
           style={[styles.sheet, { backgroundColor: colors.bgPrimary }]}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          behavior="padding"
           accessibilityViewIsModal
         >
           <View style={[styles.sheetHeader, { borderBottomColor: colors.border }]}>

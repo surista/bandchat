@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "184071432335",
+    "project_id": "bandchat-1e70d",
+    "storage_bucket": "bandchat-1e70d.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:184071432335:android:887b677a54b52a77d1e8fa",
+        "android_client_info": {
+          "package_name": "com.bandchat.mobile"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyARVt8ZTZ5dAODNn2JM3_EcO9Q6LZZEpFQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

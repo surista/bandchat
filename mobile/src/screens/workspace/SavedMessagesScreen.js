@@ -8,7 +8,9 @@ import {
   StyleSheet,
   Alert,
   RefreshControl,
+  Platform,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
@@ -22,6 +24,7 @@ import { MIN_TOUCH_TARGET } from '../../utils/touchTarget';
 export default function SavedMessagesScreen({ navigation, route }) {
   const { workspaceId } = route.params;
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
   const { isTablet, contentMaxWidth } = useLayout();
   const [savedMessages, setSavedMessages] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -166,7 +169,7 @@ export default function SavedMessagesScreen({ navigation, route }) {
         // count, which lives in the list header for the same reason) must
         // inset itself or the top rows render underneath it.
         contentInsetAdjustmentBehavior="automatic"
-        contentContainerStyle={savedMessages.length === 0 ? styles.emptyListContent : styles.list}
+        contentContainerStyle={[savedMessages.length === 0 ? styles.emptyListContent : styles.list, Platform.OS === 'android' && { paddingBottom: insets.bottom + 12 }]}
         ListHeaderComponent={savedMessages.length > 0 ? (
           <Text style={[styles.count, { color: colors.textSecondary }]}>
             {savedMessages.length} saved message{savedMessages.length !== 1 ? 's' : ''}
@@ -192,6 +195,8 @@ export default function SavedMessagesScreen({ navigation, route }) {
             refreshing={refreshing}
             onRefresh={handleRefresh}
             tintColor={colors.primary}
+            colors={[colors.primary]}
+            progressBackgroundColor={colors.bgSecondary}
           />
         }
       />

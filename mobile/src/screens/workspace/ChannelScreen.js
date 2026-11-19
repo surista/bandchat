@@ -10,12 +10,12 @@ import {
   Pressable,
   ScrollView,
   ActivityIndicator,
-  KeyboardAvoidingView,
   Keyboard,
   Platform,
   StyleSheet,
   AppState,
 } from 'react-native';
+import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { useHeaderHeight } from '@react-navigation/elements';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
@@ -332,10 +332,12 @@ export default function ChannelScreen({ navigation, route }) {
   const messagesRef = useRef(messages);
   useEffect(() => { messagesRef.current = messages; }, [messages]);
 
-  // Android: manually track keyboard height and apply as bottom padding.
-  // With softwareKeyboardLayoutMode='pan', the system pans the window up, but
-  // edge-to-edge rendering + inverted FlatList makes this unreliable. We bypass
-  // all native keyboard handling and directly compensate with padding.
+  // Android: track whether the keyboard is up, to drop the nav-bar spacer
+  // under the composer and keep the list pinned to the newest message.
+  // Keyboard avoidance itself is react-native-keyboard-controller's
+  // KeyboardAvoidingView (edge-to-edge means the window no longer resizes);
+  // this used to pad by the RN-reported height by hand, which excludes the
+  // nav bar and left the composer's toolbar under the keyboard.
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   useEffect(() => {
     if (Platform.OS !== 'android') return;
@@ -473,7 +475,7 @@ export default function ChannelScreen({ navigation, route }) {
     navigation.setOptions({
       headerRight: () => (
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          {renderPinIndicator('#ffffff', { paddingHorizontal: 8 })}
+          {renderPinIndicator(colors.headerText, { paddingHorizontal: 8 })}
           <TouchableOpacity
             onPress={handleOpenChannelSearch}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
@@ -481,7 +483,7 @@ export default function ChannelScreen({ navigation, route }) {
             accessibilityLabel="Search this channel"
             style={{ paddingHorizontal: 8 }}
           >
-            <Ionicons name="search" size={20} color="#ffffff" />
+            <Ionicons name="search" size={20} color={colors.headerText} />
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => setShowHeaderMenu(true)}
@@ -491,12 +493,12 @@ export default function ChannelScreen({ navigation, route }) {
             accessibilityHint="Channel options"
             style={{ paddingHorizontal: 8 }}
           >
-            <Ionicons name="ellipsis-horizontal" size={22} color="#ffffff" />
+            <Ionicons name="ellipsis-horizontal" size={22} color={colors.headerText} />
           </TouchableOpacity>
         </View>
       ),
     });
-  }, [navigation, channel, splitPane, handleOpenChannelSearch, renderPinIndicator]);
+  }, [navigation, channel, splitPane, handleOpenChannelSearch, renderPinIndicator, colors.headerText]);
 
   // Load blocked user IDs for socket filtering
   useEffect(() => {
@@ -1284,9 +1286,9 @@ export default function ChannelScreen({ navigation, route }) {
 
   return (
     <KeyboardAvoidingView
-      style={[styles.container, { backgroundColor: colors.bgPrimary, paddingBottom: Platform.OS === 'android' ? keyboardHeight : 0 }, isTablet && styles.tabletContainer]}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? (splitPane ? 0 : headerHeight) : 0}
+      style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]}
+      behavior="padding"
+      keyboardVerticalOffset={splitPane ? 0 : headerHeight}
     >
       <View style={[styles.chatContainer, isTablet && { maxWidth: contentMaxWidth }]}>
       {/* Split-mode inline header bar — only rendered on iPad landscape,
@@ -1628,7 +1630,7 @@ export default function ChannelScreen({ navigation, route }) {
         animationType="fade"
         onRequestClose={() => setShowReportModal(false)}
       >
-        <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <KeyboardAvoidingView style={styles.modalOverlay} behavior="padding">
           <View style={[styles.modalContent, { backgroundColor: colors.modalBg || colors.bgSecondary }]} accessibilityViewIsModal>
             <Text style={[styles.modalTitle, { color: colors.textPrimary }]} accessibilityRole="header" maxFontSizeMultiplier={1.6}>Report Message</Text>
             <Text style={[styles.modalSubtitle, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.6}>

@@ -10,9 +10,9 @@ import {
   ActivityIndicator,
   Image,
   StyleSheet,
-  KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import { KeyboardAvoidingView, KeyboardEvents } from 'react-native-keyboard-controller';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import Svg, {
@@ -25,6 +25,7 @@ import Animated, {
   runOnJS,
 } from 'react-native-reanimated';
 import { useHeaderHeight } from '@react-navigation/elements';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../context/ThemeContext';
 import { lightImpact, mediumImpact, successNotification } from '../../utils/haptics';
 import api from '../../services/api';
@@ -418,6 +419,7 @@ function DraggableItem({ item, stageLayout, onMove, onRemove, onLongPress, onUpd
 export default function StagePlotEditorScreen({ navigation, route }) {
   const { plotId, workspaceId } = route.params;
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
   const headerHeight = useHeaderHeight();
 
   const [loading, setLoading] = useState(true);
@@ -657,9 +659,26 @@ export default function StagePlotEditorScreen({ navigation, route }) {
   }, []);
 
   // Handle stage layout
+  // The KeyboardAvoidingView shrinks the canvas while the keyboard is up
+  // (editing the title / a text label). Item positions are clamped to and
+  // exported against `stageLayout`, so measuring the shrunken canvas made
+  // drags lock items in wrong places. Freeze the measurement while the
+  // keyboard is showing and apply the latest one once it has hidden.
+  const keyboardUpRef = useRef(false);
+  const latestLayoutRef = useRef(null);
+  useEffect(() => {
+    const show = KeyboardEvents.addListener('keyboardWillShow', () => { keyboardUpRef.current = true; });
+    const hide = KeyboardEvents.addListener('keyboardDidHide', () => {
+      keyboardUpRef.current = false;
+      if (latestLayoutRef.current) setStageLayout(latestLayoutRef.current);
+    });
+    return () => { show.remove(); hide.remove(); };
+  }, []);
+
   const handleStageLayout = useCallback((e) => {
     const { width, height } = e.nativeEvent.layout;
-    setStageLayout({ width, height });
+    latestLayoutRef.current = { width, height };
+    setStageLayout(prev => ((keyboardUpRef.current && prev.width > 0) ? prev : { width, height }));
   }, []);
 
   if (loading) {
@@ -674,7 +693,7 @@ export default function StagePlotEditorScreen({ navigation, route }) {
 
   return (
     <GestureHandlerRootView style={[styles.container, { backgroundColor: colors.bgPrimary }]}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={Platform.OS === 'ios' ? headerHeight : 0} style={{ flex: 1 }}>
+      <KeyboardAvoidingView behavior="padding" keyboardVerticalOffset={headerHeight} style={{ flex: 1 }}>
       {/* Info bar */}
       <View style={[styles.infoBar, { backgroundColor: colors.bgSecondary, borderBottomColor: colors.border }]}>
         <View style={styles.infoRow}>
@@ -754,7 +773,7 @@ export default function StagePlotEditorScreen({ navigation, route }) {
       </Text>
 
       {/* Item count */}
-      <Text style={[styles.itemCount, { color: colors.textSecondary }]}>
+      <Text style={[styles.itemCount, { color: colors.textSecondary, paddingBottom: 8 + insets.bottom }]}>
         {items.length} item{items.length !== 1 ? 's' : ''} {'\u00B7'} Auto-saved
       </Text>
 
@@ -763,7 +782,7 @@ export default function StagePlotEditorScreen({ navigation, route }) {
       {/* Instrument palette modal */}
       <Modal visible={showPalette} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setShowPalette(false)}>
         <TouchableOpacity style={styles.paletteOverlay} activeOpacity={1} onPress={() => setShowPalette(false)} accessibilityRole="button" accessibilityLabel="Close instrument palette">
-          <View style={[styles.paletteSheet, { backgroundColor: colors.modalBg }]} accessibilityViewIsModal>
+          <View style={[styles.paletteSheet, { backgroundColor: colors.modalBg, paddingBottom: Math.max(insets.bottom, 20) + 14 }]} accessibilityViewIsModal>
             <View style={[styles.paletteHandle, { backgroundColor: colors.border }]} />
             <Text style={[styles.paletteTitle, { color: colors.textPrimary }]}>Add Instrument</Text>
             <ScrollView style={styles.paletteScroll} showsVerticalScrollIndicator={false}>

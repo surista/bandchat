@@ -11,14 +11,16 @@ import {
   RefreshControl,
   ScrollView,
   StyleSheet,
-  KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { format } from 'date-fns';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useHeaderHeight } from '@react-navigation/elements';
+import { usePreventRemove } from '@react-navigation/native';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { useToast } from '../../context/ToastContext';
@@ -63,6 +65,7 @@ export default function TimelineScreen({ navigation, route }) {
   const { user } = useAuth()
   const { isTablet, contentMaxWidth } = useLayout();
   const { colors, mode } = useTheme();
+  const insets = useSafeAreaInsets();
   const toast = useToast();
   const headerHeight = useHeaderHeight();
 
@@ -183,6 +186,15 @@ export default function TimelineScreen({ navigation, route }) {
     setFormDate(new Date());
     setFormImageUrl('');
   }, []);
+
+  // The add/edit form is a sub-view of this screen, not its own route, so
+  // back (Android button/gesture, iOS swipe) used to pop the whole screen and
+  // lose the form. Treat back as Cancel while the form is open.
+  usePreventRemove(showForm, () => {
+    setShowForm(false);
+    resetForm();
+  });
+
 
   const startEdit = useCallback((event) => {
     setEditingEvent(event);
@@ -374,8 +386,8 @@ export default function TimelineScreen({ navigation, route }) {
     return (
       <KeyboardAvoidingView
         style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? headerHeight : 0}
+        behavior="padding"
+        keyboardVerticalOffset={headerHeight}
       >
         <ScrollView contentContainerStyle={[styles.formContent, isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
           <Text style={[styles.formTitle, { color: colors.textPrimary }]}>
@@ -497,7 +509,7 @@ export default function TimelineScreen({ navigation, route }) {
         {/* Type Picker Modal */}
         <Modal visible={showTypePicker} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setShowTypePicker(false)}>
           <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowTypePicker(false)} accessibilityRole="button" accessibilityLabel="Dismiss event type picker">
-            <View style={[styles.pickerContent, { backgroundColor: colors.modalBg }]} accessibilityViewIsModal>
+            <View style={[styles.pickerContent, { backgroundColor: colors.modalBg, paddingBottom: Math.max(insets.bottom, 20) + 20 }]} accessibilityViewIsModal>
               <Text style={[styles.pickerTitle, { color: colors.textPrimary }]} accessibilityRole="header">Event Type</Text>
               {EVENT_TYPES.map(t => (
                 <PressableRow

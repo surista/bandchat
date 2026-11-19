@@ -13,6 +13,7 @@ import {
   Linking,
   StyleSheet,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../../context/ThemeContext';
 import api from '../../services/api';
@@ -152,6 +153,7 @@ function RecommendationsTab({ workspaceId, colors }) {
 
 // --- Mashups Tab ---
 function MashupsTab({ workspaceId, colors }) {
+  const insets = useSafeAreaInsets();
   const [songs, setSongs] = useState([]);
   const [selectedSong, setSelectedSong] = useState(null);
   const [suggestions, setSuggestions] = useState(null);
@@ -243,7 +245,7 @@ function MashupsTab({ workspaceId, colors }) {
       {/* Song Picker */}
       <Modal visible={showPicker} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setShowPicker(false)}>
         <TouchableOpacity style={styles.pickerOverlay} activeOpacity={1} onPress={() => setShowPicker(false)} accessibilityRole="button" accessibilityLabel="Dismiss song picker">
-          <View style={[styles.pickerContent, { backgroundColor: colors.modalBg }]} accessibilityViewIsModal>
+          <View style={[styles.pickerContent, { backgroundColor: colors.modalBg, paddingBottom: Math.max(insets.bottom, 20) + 20 }]} accessibilityViewIsModal>
             <Text style={[styles.pickerTitle, { color: colors.textPrimary }]} accessibilityRole="header">Select Song</Text>
             <FlatList
               data={songs}

@@ -178,7 +178,8 @@ function ImageViewer({ visible, imageUrl, images, initialIndex = 0, onClose }) {
           onIndexChange={setCurrentIdx}
           onSwipe={onSwipe}
         />
-        <View style={[styles.header, { paddingTop: insets.top + 8 }]} pointerEvents="box-none">
+        {/* Side insets matter in landscape: the nav bar / camera cutout move to the sides. */}
+        <View style={[styles.header, { paddingTop: insets.top + 8, paddingLeft: insets.left + 16, paddingRight: insets.right + 16 }]} pointerEvents="box-none">
           <TouchableOpacity
             style={styles.headerButton}
             onPress={onClose}

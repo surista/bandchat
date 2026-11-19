@@ -12,9 +12,9 @@ import {
   TouchableOpacity,
   StyleSheet,
   Alert,
-  KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { Image } from 'expo-image';
 import { successNotification, errorNotification, selectionFeedback } from '../../utils/haptics';
 import { MIN_TOUCH_TARGET } from '../../utils/touchTarget';
@@ -266,10 +266,10 @@ export default function ChannelListScreen({ navigation, route }) {
               </Text>
             )}
           </View>
-          <Text style={{ color: colors.textPrimary, fontWeight: '600', fontSize: 17 }} numberOfLines={1} maxFontSizeMultiplier={1.5}>
+          <Text style={{ color: colors.headerText, fontWeight: '600', fontSize: 17 }} numberOfLines={1} maxFontSizeMultiplier={1.5}>
             {workspaceName}
           </Text>
-          <Ionicons name="chevron-down" size={16} color={colors.textSecondary} />
+          <Ionicons name="chevron-down" size={16} color={colors.headerText} style={{ opacity: 0.7 }} />
         </TouchableOpacity>
       ),
       headerLeft: () => null,
@@ -1127,7 +1127,7 @@ export default function ChannelListScreen({ navigation, route }) {
 
       {/* Create Channel Modal */}
       <Modal visible={showCreateChannel} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setShowCreateChannel(false)}>
-        <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <KeyboardAvoidingView style={styles.modalOverlay} behavior="padding">
           <View style={[styles.modalContent, { backgroundColor: colors.modalBg }]} accessibilityViewIsModal>
             <Text style={[styles.modalTitle, { color: colors.textPrimary }]} maxFontSizeMultiplier={1.6}>Create Channel</Text>
             <Text style={[styles.modalLabel, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>Channel Name</Text>
@@ -1281,7 +1281,7 @@ export default function ChannelListScreen({ navigation, route }) {
 
       {/* Group Create/Edit Modal */}
       <Modal visible={showGroupModal} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setShowGroupModal(false)}>
-        <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <KeyboardAvoidingView style={styles.modalOverlay} behavior="padding">
           <View style={[styles.modalContent, { backgroundColor: colors.modalBg }]} accessibilityViewIsModal>
             <Text style={[styles.modalTitle, { color: colors.textPrimary }]} maxFontSizeMultiplier={1.6}>
               {editingGroup ? 'Rename Section' : 'New Section'}

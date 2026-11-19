@@ -9,6 +9,7 @@ import {
   BackHandler,
   StyleSheet,
   useWindowDimensions,
+  ToastAndroid,
 } from 'react-native';
 // expo-status-bar (not react-native's StatusBar) — Expo's version maintains a
 // stack of styles, so when LiveMode unmounts the previous bar styling is
@@ -146,10 +147,19 @@ export default function LiveModeScreen({ navigation, route }) {
     navigation.goBack();
   }, [navigation]);
 
-  // Android hardware back button
+  // Android back button / gesture. On stage, an edge swipe meant for "previous
+  // song" is easily read as Back, so require a second back within 2s to
+  // leave. The on-screen close button still exits immediately.
+  const lastBackRef = useRef(0);
   useEffect(() => {
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {
-      handleClose();
+      const now = Date.now();
+      if (now - lastBackRef.current < 2000) {
+        handleClose();
+      } else {
+        lastBackRef.current = now;
+        ToastAndroid.show('Press back again to exit Live Mode', ToastAndroid.SHORT);
+      }
       return true;
     });
     return () => sub.remove();

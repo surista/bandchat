@@ -4,11 +4,11 @@ import {
   Text,
   FlatList,
   ActivityIndicator,
-  KeyboardAvoidingView,
   Keyboard,
   Platform,
   StyleSheet,
 } from 'react-native';
+import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { useHeaderHeight } from '@react-navigation/elements';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
@@ -53,7 +53,8 @@ export default function ThreadScreen({ navigation, route }) {
 
   const parentIdRef = useRef(parentMessage.id);
 
-  // Android: manually track keyboard height and apply as bottom padding
+  // Android: track whether the keyboard is up (drops the nav-bar spacer).
+  // Avoidance itself is keyboard-controller's KeyboardAvoidingView.
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   useEffect(() => {
     if (Platform.OS !== 'android') return;
@@ -420,9 +421,9 @@ export default function ThreadScreen({ navigation, route }) {
 
   return (
     <KeyboardAvoidingView
-      style={[styles.container, { backgroundColor: colors.bgPrimary, paddingBottom: Platform.OS === 'android' ? keyboardHeight : 0 }, isTablet && styles.tabletContainer]}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? headerHeight : 0}
+      style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]}
+      behavior="padding"
+      keyboardVerticalOffset={headerHeight}
     >
       <View style={[styles.chatContainer, isTablet && { maxWidth: contentMaxWidth }]}>
       <FlatList
