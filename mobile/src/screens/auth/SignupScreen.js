@@ -109,6 +109,8 @@ export default function SignupScreen({ navigation }) {
       await signup(email.trim(), password, displayName.trim(), token);
     } catch (err) {
       setError(err.message);
+      // Turnstile tokens are single-use -- the next attempt needs a new one.
+      setTurnstileToken(null);
     } finally {
       setLoading(false);
     }

@@ -817,22 +817,33 @@ function MessageList({
   // inline expansion is on, and cache them by parent id. Not re-fetched on
   // every render — only for parents we haven't loaded yet.
   const [repliesByParentId, setRepliesByParentId] = useState({});
+  // Parent ids with a getReplies request in flight or already resolved.
+  // Tracked in a ref (not derived from repliesByParentId in the effect deps)
+  // so each resolved fetch doesn't re-run the effect and cancel + re-issue
+  // every other in-flight request -- that was an O(N^2) request storm.
+  const requestedRepliesRef = useRef(new Set());
+  const unmountedRef = useRef(false);
+  useEffect(() => () => { unmountedRef.current = true; }, []);
   useEffect(() => {
-    if (!showRepliesInline) return;
-    const toFetch = messages.filter(m => (m._count?.replies > 0) && !(m.id in repliesByParentId));
-    if (toFetch.length === 0) return;
-    let cancelled = false;
-    toFetch.forEach(m => {
+    if (!showRepliesInline) {
+      // Toggled off: forget the cache so turning it back on refetches fresh.
+      requestedRepliesRef.current = new Set();
+      setRepliesByParentId(prev => (Object.keys(prev).length ? {} : prev));
+      return;
+    }
+    const requested = requestedRepliesRef.current;
+    messages.forEach(m => {
+      if (!(m._count?.replies > 0) || requested.has(m.id)) return;
+      requested.add(m.id);
       api.getReplies(m.id).then(data => {
-        if (cancelled) return;
+        if (unmountedRef.current || requestedRepliesRef.current !== requested) return;
         setRepliesByParentId(prev => ({ ...prev, [m.id]: data.replies || [] }));
       }).catch(() => {
-        if (cancelled) return;
+        if (unmountedRef.current || requestedRepliesRef.current !== requested) return;
         setRepliesByParentId(prev => ({ ...prev, [m.id]: [] }));
       });
     });
-    return () => { cancelled = true; };
-  }, [showRepliesInline, messages, repliesByParentId]);
+  }, [showRepliesInline, messages]);
 
   // Keep already-expanded inline threads live. ChannelView's own
   // message:reply handler bumps the parent's _count.replies (and triggers

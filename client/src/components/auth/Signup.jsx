@@ -18,6 +18,9 @@ function Signup() {
   const [showPassword, setShowPassword] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState(null);
+  // Bumped after every failed attempt to remount the widget: Turnstile tokens
+  // are single-use, so resubmitting the old one always fails verification.
+  const [turnstileKey, setTurnstileKey] = useState(0);
 
   const handleTurnstileVerify = useCallback((token) => setTurnstileToken(token), []);
   const handleTurnstileExpire = useCallback(() => setTurnstileToken(null), []);
@@ -47,6 +50,10 @@ function Signup() {
       await signup(email, password, displayName, turnstileToken);
     } catch (err) {
       setError(err.message);
+      if (TURNSTILE_ENABLED) {
+        setTurnstileToken(null);
+        setTurnstileKey(k => k + 1);
+      }
     } finally {
       setLoading(false);
     }
@@ -201,7 +208,7 @@ function Signup() {
             </span>
           </label>
 
-          <TurnstileWidget onVerify={handleTurnstileVerify} onExpire={handleTurnstileExpire} />
+          <TurnstileWidget key={turnstileKey} onVerify={handleTurnstileVerify} onExpire={handleTurnstileExpire} />
 
           <button
             type="submit"

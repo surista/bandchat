@@ -423,9 +423,19 @@ export default function SetlistListScreen({ navigation, route }) {
         visible={showCreate}
         animationType="slide"
         presentationStyle="pageSheet"
+        // RN 0.81 page sheets ignore the swipe-down gesture unless this is
+        // set; the swipe then routes through onRequestClose (keeps draft).
+        allowSwipeDismissal={!creating}
         onRequestClose={() => { if (!creating) setShowCreate(false); }}
         onDismiss={handleCreateSheetDismissed}
       >
+        {/* Android draws modals edge-to-edge behind the status bar, so the
+            header needs the top inset there; iOS page sheets already sit
+            below it. */}
+        <SafeAreaView
+          style={[styles.sheet, { backgroundColor: colors.bgPrimary }]}
+          edges={Platform.OS === 'android' ? ['top', 'bottom'] : ['bottom']}
+        >
         <KeyboardAvoidingView
           style={[styles.sheet, { backgroundColor: colors.bgPrimary }]}
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -509,6 +519,7 @@ export default function SetlistListScreen({ navigation, route }) {
             />
           </ScrollView>
         </KeyboardAvoidingView>
+        </SafeAreaView>
       </Modal>
 
       <ActionSheet

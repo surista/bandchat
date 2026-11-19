@@ -16,6 +16,19 @@
 
 export const RELEASE_NOTES = [
   {
+    version: '1.07.78',
+    date: '2026-11-20',
+    items: [
+      { kind: 'added', text: 'After jumping to an older message, newer messages load as you scroll down, and a "Jump to latest" button takes you back to the present.' },
+      { kind: 'fixed', text: 'Setlist dates linked to a gig now show on the correct day in every time zone.' },
+      { kind: 'fixed', text: 'Signup: a failed attempt now gives you a fresh security check instead of getting stuck. On mobile, a failed check shows an error with Try Again.' },
+      { kind: 'fixed', text: 'Web: video and recording previews, video downloads and the Audio Analyzer work again.' },
+      { kind: 'fixed', text: 'Editing a tentative event now updates its card in the channels it was posted to.' },
+      { kind: 'fixed', text: 'Mobile: the new setlist sheet no longer sits under the status bar on Android, and can be swiped down to close on iOS.' },
+      { kind: 'changed', text: 'Mobile: replies from blocked users are hidden in inline thread replies.' },
+    ],
+  },
+  {
     version: '1.07.77',
     date: '2026-11-16',
     items: [

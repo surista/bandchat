@@ -7,6 +7,7 @@ import {
   Modal,
   TextInput,
   TouchableOpacity,
+  Pressable,
   ScrollView,
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -176,6 +177,30 @@ export default function ChannelScreen({ navigation, route }) {
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(false);
   const [nextCursor, setNextCursor] = useState(null);
+  // Set while the loaded list is an anchored window around a deep-linked
+  // older message that doesn't reach the present yet. Mirrored in refs for
+  // the socket handlers. While set: newer pages load as the user scrolls
+  // down, live messages are held back (appending them would sit after a
+  // silent gap) and merged in once caught up, and "Jump to latest" shows.
+  const [hasNewer, setHasNewerState] = useState(false);
+  const hasNewerRef = useRef(false);
+  const newerCursorRef = useRef(null);
+  const heldNewMessagesRef = useRef([]);
+  const loadingNewerRef = useRef(false);
+  const [loadingNewer, setLoadingNewer] = useState(false);
+  // Bumped whenever the list is replaced wholesale, so an in-flight page
+  // fetch for the previous list is dropped instead of spliced in.
+  const listGenerationRef = useRef(0);
+  // Which highlightMessageId the currently-loaded list was fetched for --
+  // the highlight effect waits on this so it can't resolve against the
+  // PREVIOUS list when this screen is re-targeted while already open.
+  const listLoadedForHighlightRef = useRef(undefined);
+  const setWindowEdge = useCallback((more, cursor = null) => {
+    hasNewerRef.current = !!more;
+    newerCursorRef.current = more ? cursor : null;
+    if (!more) heldNewMessagesRef.current = [];
+    setHasNewerState(!!more);
+  }, []);
   const [highlightedMessageId, setHighlightedMessageId] = useState(null);
   const [highlightTargetMissing, setHighlightTargetMissing] = useState(false);
 
@@ -186,28 +211,39 @@ export default function ChannelScreen({ navigation, route }) {
   const [repliesByParentId, setRepliesByParentId] = useState({});
 
   // Lazily fetch replies for every currently-loaded threaded message once
-  // inline expansion is on, and cache them by parent id.
+  // inline expansion is on, and cache them by parent id. In-flight/fetched
+  // parent ids live in a ref rather than being derived from
+  // repliesByParentId in the deps -- otherwise every resolved fetch re-runs
+  // the effect and cancels + re-issues all the others (O(N^2) requests).
+  const requestedRepliesRef = useRef(new Set());
+  const repliesUnmountedRef = useRef(false);
+  useEffect(() => () => { repliesUnmountedRef.current = true; }, []);
   useEffect(() => {
-    if (!showRepliesInline) return;
-    const toFetch = messages.filter(m => (m._count?.replies > 0) && !(m.id in repliesByParentId));
-    if (toFetch.length === 0) return;
-    let cancelled = false;
-    toFetch.forEach(m => {
+    if (!showRepliesInline) {
+      requestedRepliesRef.current = new Set();
+      setRepliesByParentId(prev => (Object.keys(prev).length ? {} : prev));
+      return;
+    }
+    const requested = requestedRepliesRef.current;
+    messages.forEach(m => {
+      if (!(m._count?.replies > 0) || requested.has(m.id)) return;
+      requested.add(m.id);
       api.getReplies(m.id).then(data => {
-        if (cancelled) return;
-        setRepliesByParentId(prev => ({ ...prev, [m.id]: data.replies || [] }));
+        if (repliesUnmountedRef.current || requestedRepliesRef.current !== requested) return;
+        const visible = (data.replies || []).filter(r => !blockedIdsRef.current.has(r.author?.id));
+        setRepliesByParentId(prev => ({ ...prev, [m.id]: visible }));
       }).catch(() => {
-        if (cancelled) return;
+        if (repliesUnmountedRef.current || requestedRepliesRef.current !== requested) return;
         setRepliesByParentId(prev => ({ ...prev, [m.id]: [] }));
       });
     });
-    return () => { cancelled = true; };
-  }, [showRepliesInline, messages, repliesByParentId]);
+  }, [showRepliesInline, messages]);
 
   // Keep already-expanded inline threads live.
   useEffect(() => {
     if (!socket || !showRepliesInline) return;
     const handleReply = ({ parentId, message: reply }) => {
+      if (blockedIdsRef.current.has(reply?.author?.id)) return;
       setRepliesByParentId(prev => {
         if (!(parentId in prev)) return prev; // not expanded/fetched — the fetch effect picks it up fresh
         if (prev[parentId].some(r => r.id === reply.id)) return prev;
@@ -419,7 +455,7 @@ export default function ChannelScreen({ navigation, route }) {
         <Ionicons name="pin" size={20} color={color} />
         {/* Ring in the header colour so the badge stays legible on themes whose header is the primary colour */}
         <View style={[styles.pinBadge, { backgroundColor: colors.primary, borderColor: colors.headerBg }]}>
-          <Text style={styles.pinBadgeText} maxFontSizeMultiplier={1.2}>
+          <Text style={[styles.pinBadgeText, { color: colors.primaryText }]} maxFontSizeMultiplier={1.2}>
             {pinnedCount > 99 ? '99+' : pinnedCount}
           </Text>
         </View>
@@ -509,6 +545,8 @@ export default function ChannelScreen({ navigation, route }) {
       setLoading(true);
       setMessages([]);
       setTypingUsers([]);
+      listLoadedForHighlightRef.current = undefined;
+      setWindowEdge(false);
 
       // Pre-load from SQLite for instant display. Skipped for a deep link to
       // a specific message — the cache only ever holds the latest page, so
@@ -536,7 +574,13 @@ export default function ChannelScreen({ navigation, route }) {
         if (highlightMessageId) {
           try {
             const around = await api.getMessagesAround(channel.id, highlightMessageId);
-            data = { messages: around.messages, hasMore: around.hasMoreBefore, nextCursor: around.beforeCursor };
+            data = {
+              messages: around.messages,
+              hasMore: around.hasMoreBefore,
+              nextCursor: around.beforeCursor,
+              hasNewer: around.hasMoreAfter,
+              newerCursor: around.afterCursor,
+            };
           } catch {
             // Fall through to the normal load below.
           }
@@ -545,9 +589,12 @@ export default function ChannelScreen({ navigation, route }) {
           data = await api.getMessages(channel.id);
         }
         if (cancelled) return;
+        listGenerationRef.current++;
+        listLoadedForHighlightRef.current = highlightMessageId;
         setMessages(data.messages);
         setHasMore(data.hasMore);
         setNextCursor(data.nextCursor);
+        setWindowEdge(!!data.hasNewer, data.newerCursor);
 
         // Persist to SQLite
         upsertMessages(data.messages).catch(() => {});
@@ -568,7 +615,7 @@ export default function ChannelScreen({ navigation, route }) {
       cancelled = true;
       leaveChannel(channel.id);
     };
-  }, [channel.id, joinChannel, leaveChannel, retryCount, highlightMessageId]);
+  }, [channel.id, joinChannel, leaveChannel, retryCount, highlightMessageId, setWindowEdge]);
 
   // Socket event handlers
   useEffect(() => {
@@ -580,6 +627,14 @@ export default function ChannelScreen({ navigation, route }) {
       if (message.parentId) return;
       // Filter blocked users
       if (blockedIdsRef.current.has(message.author?.id)) return;
+      if (hasNewerRef.current) {
+        // Anchored older window: hold it until forward pagination reaches
+        // the present instead of appending it after a gap.
+        if (!heldNewMessagesRef.current.some(m => m.id === message.id)) {
+          heldNewMessagesRef.current.push(message);
+        }
+        return;
+      }
 
       setMessages(prev => {
         if (prev.some(m => m.id === message.id)) return prev;
@@ -690,7 +745,9 @@ export default function ChannelScreen({ navigation, route }) {
     const handleReconnect = async () => {
       const chId = channelIdRef.current;
       joinChannel(chId);
-      api.getMessages(chId).then(data => {
+      // In an anchored older window, merging the latest page would splice
+      // it on after a gap -- forward pagination / Jump to latest covers it.
+      if (!hasNewerRef.current) api.getMessages(chId).then(data => {
         if (chId !== channelIdRef.current) return;
         // Merge fresh latest-50 with the existing list instead of replacing.
         // A bare setMessages(data.messages) would silently wipe any older
@@ -806,8 +863,10 @@ export default function ChannelScreen({ navigation, route }) {
     if (!hasMore || loadingMoreRef.current || !nextCursor) return;
     loadingMoreRef.current = true;
     setLoadingMore(true);
+    const generation = listGenerationRef.current;
     try {
       const data = await api.getMessages(channel.id, nextCursor);
+      if (generation !== listGenerationRef.current) return;
       setMessages(prev => [...data.messages, ...prev]);
       setHasMore(data.hasMore);
       setNextCursor(data.nextCursor);
@@ -823,8 +882,63 @@ export default function ChannelScreen({ navigation, route }) {
     }
   }, [hasMore, nextCursor, channel.id]);
 
+  // Forward pagination from an anchored window toward the present.
+  const loadNewer = useCallback(async () => {
+    if (!hasNewerRef.current || !newerCursorRef.current || loadingNewerRef.current) return;
+    loadingNewerRef.current = true;
+    setLoadingNewer(true);
+    const generation = listGenerationRef.current;
+    const chId = channel.id;
+    try {
+      const data = await api.getMessagesAround(chId, newerCursorRef.current, 50, { side: 'after' });
+      if (generation !== listGenerationRef.current || chId !== channelIdRef.current) return;
+      const held = data.hasMoreAfter ? [] : heldNewMessagesRef.current;
+      setMessages(prev => {
+        const seen = new Set(prev.map(m => m.id));
+        const fresh = [...data.messages, ...held].filter(m => {
+          if (seen.has(m.id)) return false;
+          seen.add(m.id);
+          return true;
+        });
+        if (held.length > 0) fresh.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+        return fresh.length > 0 ? [...prev, ...fresh] : prev;
+      });
+      setWindowEdge(data.hasMoreAfter, data.afterCursor);
+      upsertMessages(data.messages).catch(() => {});
+    } catch {
+      // "Jump to latest" stays visible as the recovery path.
+    } finally {
+      loadingNewerRef.current = false;
+      setLoadingNewer(false);
+    }
+  }, [channel.id, setWindowEdge]);
+
+  // Leave an anchored window and reload the channel's latest page.
+  const jumpToLatest = useCallback(async () => {
+    const chId = channel.id;
+    try {
+      const data = await api.getMessages(chId);
+      if (chId !== channelIdRef.current) return;
+      listGenerationRef.current++;
+      setMessages(data.messages);
+      setHasMore(data.hasMore);
+      setNextCursor(data.nextCursor);
+      setWindowEdge(false);
+      upsertMessages(data.messages).catch(() => {});
+      requestAnimationFrame(() => flatListRef.current?.scrollToOffset({ offset: 0, animated: false }));
+    } catch {
+      toast.error('Could not load the latest messages');
+    }
+  }, [channel.id, setWindowEdge, toast]);
+
   // Send message with optimistic update + optional attachment
   const handleSend = useCallback(async (content, attachmentOrArray) => {
+    // Sending from an anchored older window: return to the present first so
+    // the message lands after the real latest message, not after a gap.
+    if (hasNewerRef.current) {
+      await jumpToLatest();
+      if (hasNewerRef.current) setWindowEdge(false);
+    }
     // Normalize to array
     const fileList = !attachmentOrArray ? [] :
       Array.isArray(attachmentOrArray) ? attachmentOrArray :
@@ -892,7 +1006,7 @@ export default function ChannelScreen({ navigation, route }) {
         toast.error(err.message || 'Failed to send message');
       }
     }
-  }, [user, channel.id, workspaceId]);
+  }, [user, channel.id, workspaceId, jumpToLatest, setWindowEdge, toast]);
 
   // Send voice message
   const handleSendVoice = useCallback(async (uri) => {
@@ -1063,6 +1177,9 @@ export default function ChannelScreen({ navigation, route }) {
     if (!highlightMessageId || openThreadId) return;
     if (highlightResolvedForRef.current === highlightMessageId) return;
     if (loading || invertedMessages.length === 0) return;
+    // Re-targeted while already open: init has started reloading but this
+    // render may still hold the previous list -- wait for the new one.
+    if (listLoadedForHighlightRef.current !== highlightMessageId) return;
     const index = invertedMessages.findIndex(m => m.id === highlightMessageId);
     highlightResolvedForRef.current = highlightMessageId;
     if (index < 0) {
@@ -1303,6 +1420,13 @@ export default function ChannelScreen({ navigation, route }) {
         inverted
         onEndReached={loadMore}
         onEndReachedThreshold={0.3}
+        // Inverted list: the "start" is the visual bottom (newest edge).
+        onStartReached={hasNewer ? loadNewer : undefined}
+        onStartReachedThreshold={0.3}
+        // Keep the reader's place when a newer page is inserted at index 0
+        // (the bottom) of an anchored window; off otherwise so normal chat
+        // behaviour at the live edge is unchanged.
+        maintainVisibleContentPosition={hasNewer ? { minIndexForVisible: 0 } : undefined}
         onScrollToIndexFailed={onScrollToIndexFailed}
         onScroll={(e) => { scrollOffsetRef.current = e.nativeEvent.contentOffset.y; }}
         scrollEventThrottle={100}
@@ -1318,6 +1442,25 @@ export default function ChannelScreen({ navigation, route }) {
         initialNumToRender={15}
         getItemLayout={undefined} // Can't use with variable height items
       />
+      )}
+      {hasNewer && (
+        <View style={styles.jumpLatestWrap} pointerEvents="box-none">
+          <View style={styles.jumpLatestFloat} pointerEvents="box-none">
+          <Pressable
+            onPress={() => { selectionFeedback(); jumpToLatest(); }}
+            style={({ pressed }) => [styles.jumpLatestButton, { backgroundColor: colors.primary, opacity: pressed ? 0.85 : 1 }]}
+            accessibilityRole="button"
+            accessibilityLabel="Jump to latest messages"
+          >
+            {loadingNewer
+              ? <ActivityIndicator size="small" color={colors.primaryText} />
+              : <Ionicons name="arrow-down" size={16} color={colors.primaryText} />}
+            <Text style={[styles.jumpLatestText, { color: colors.primaryText }]} maxFontSizeMultiplier={1.3}>
+              Jump to latest
+            </Text>
+          </Pressable>
+          </View>
+        </View>
       )}
       {uploadProgress !== null && (
         <View style={[styles.uploadBar, { backgroundColor: colors.bgSecondary }]}>
@@ -1671,6 +1814,36 @@ const styles = StyleSheet.create({
     paddingTop: 2,
     paddingBottom: 4,
     textAlign: 'right',
+  },
+  // Zero-height anchor sitting between the list and whatever is below it
+  // (upload/typing bars, input) -- the pill floats just above that edge
+  // regardless of the input's current height.
+  jumpLatestWrap: {
+    height: 0,
+    overflow: 'visible',
+    alignItems: 'center',
+    zIndex: 10,
+  },
+  jumpLatestFloat: {
+    position: 'absolute',
+    bottom: 12,
+  },
+  jumpLatestButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    minHeight: MIN_TOUCH_TARGET,
+    paddingHorizontal: 16,
+    borderRadius: MIN_TOUCH_TARGET / 2,
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 4,
+  },
+  jumpLatestText: {
+    fontSize: 15,
+    fontWeight: '600',
   },
   uploadBar: {
     paddingHorizontal: 16,

@@ -864,7 +864,7 @@ export default function GigDetailScreen({ navigation, route }) {
 
           {!isNew && status === 'PENDING' && (
             <View style={[styles.pendingBox, { backgroundColor: colors.bgTertiary, borderColor: STATUS_COLORS.PENDING }]}>
-              <Text style={{ color: STATUS_COLORS.PENDING, fontWeight: '600', marginBottom: isAdmin ? 10 : 4 }}>
+              <Text maxFontSizeMultiplier={1.5} style={{ color: STATUS_COLORS.PENDING, fontWeight: '600', marginBottom: isAdmin ? 10 : 4 }}>
                 🟡 Tentative — pending confirmation
               </Text>
               {isAdmin ? (
@@ -876,7 +876,7 @@ export default function GigDetailScreen({ navigation, route }) {
                     accessibilityRole="button"
                     accessibilityLabel="Confirm gig"
                   >
-                    <Text style={styles.formButtonTextWhite}>Confirm Gig</Text>
+                    <Text maxFontSizeMultiplier={1.5} style={styles.formButtonTextWhite}>Confirm Gig</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     disabled={confirmRejectLoading}
@@ -885,11 +885,11 @@ export default function GigDetailScreen({ navigation, route }) {
                     accessibilityRole="button"
                     accessibilityLabel="Reject gig"
                   >
-                    <Text style={styles.formButtonTextWhite}>Reject Gig</Text>
+                    <Text maxFontSizeMultiplier={1.5} style={styles.formButtonTextWhite}>Reject Gig</Text>
                   </TouchableOpacity>
                 </View>
               ) : (
-                <Text style={{ color: colors.textSecondary, fontSize: 13 }}>An admin needs to confirm or reject this before it’s locked in.</Text>
+                <Text maxFontSizeMultiplier={1.5} style={{ color: colors.textSecondary, fontSize: 13 }}>An admin needs to confirm or reject this before it’s locked in.</Text>
               )}
             </View>
           )}
@@ -914,20 +914,21 @@ export default function GigDetailScreen({ navigation, route }) {
               <PressableRow
                 style={styles.checkboxRow}
                 onPress={() => setIsTentative(prev => !prev)}
-                accessibilityRole="button"
-                accessibilityLabel={`Tentative, ${isTentative ? 'checked' : 'unchecked'}`}
+                accessibilityRole="checkbox"
+                accessibilityLabel="Tentative, announce to specific channels"
+                accessibilityState={{ checked: isTentative }}
               >
                 <View style={[styles.checkbox, { borderColor: colors.border }, isTentative && { backgroundColor: colors.primary, borderColor: colors.primary }]}>
                   {isTentative && <Text style={[styles.checkmark, { color: colors.primaryText }]}>{'✓'}</Text>}
                 </View>
-                <Text style={[styles.checkboxLabel, { color: colors.textPrimary }]}>Tentative — not booked yet, announce to specific channels</Text>
+                <Text maxFontSizeMultiplier={1.5} style={[styles.checkboxLabel, { color: colors.textPrimary }]}>Tentative — not booked yet, announce to specific channels</Text>
               </PressableRow>
               {isTentative && (
                 <View style={[styles.pendingBox, { backgroundColor: colors.bgTertiary, borderColor: colors.border }]}>
                   {tentativeChannels === null ? (
-                    <Text style={{ color: colors.textSecondary }}>Loading channels…</Text>
+                    <Text maxFontSizeMultiplier={1.5} style={{ color: colors.textSecondary }}>Loading channels…</Text>
                   ) : tentativeChannels.length === 0 ? (
-                    <Text style={{ color: colors.textSecondary }}>No channels available.</Text>
+                    <Text maxFontSizeMultiplier={1.5} style={{ color: colors.textSecondary }}>No channels available.</Text>
                   ) : (
                     tentativeChannels.map(c => (
                       <PressableRow
@@ -937,12 +938,13 @@ export default function GigDetailScreen({ navigation, route }) {
                           prev.includes(c.id) ? prev.filter(id => id !== c.id) : [...prev, c.id]
                         )}
                         accessibilityRole="checkbox"
-                        accessibilityLabel={`# ${c.name}, ${tentativeChannelIds.includes(c.id) ? 'checked' : 'unchecked'}`}
+                        accessibilityLabel={`# ${c.name}`}
+                        accessibilityState={{ checked: tentativeChannelIds.includes(c.id) }}
                       >
                         <View style={[styles.checkbox, { borderColor: colors.border }, tentativeChannelIds.includes(c.id) && { backgroundColor: colors.primary, borderColor: colors.primary }]}>
                           {tentativeChannelIds.includes(c.id) && <Text style={[styles.checkmark, { color: colors.primaryText }]}>{'✓'}</Text>}
                         </View>
-                        <Text style={[styles.checkboxLabel, { color: colors.textPrimary }]}># {c.name}</Text>
+                        <Text maxFontSizeMultiplier={1.5} style={[styles.checkboxLabel, { color: colors.textPrimary }]}># {c.name}</Text>
                       </PressableRow>
                     ))
                   )}

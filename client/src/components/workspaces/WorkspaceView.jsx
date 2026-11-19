@@ -938,6 +938,7 @@ function WorkspaceView() {
         render: () => (
           <ChannelView
             key={`split-${ch.id}`}
+            handlesDeepLinks={false}
             channel={ch}
             workspace={workspace}
             // Right pane is view-only for v1: thread/library/DM actions route

@@ -29,7 +29,7 @@ import { useToast } from '../../context/ToastContext';
  * @param {function} props.onOpenThread - Callback when user clicks to open a thread
  * @param {function} props.onUpdateUnread - Callback to update unread count (called with 0 on channel select)
  */
-function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThreadId, onOpenSearch, onStartDM, onMuteChannel, onAddToLibrary, channels, onSelectChannel, onSplitRight }) {
+function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThreadId, onOpenSearch, onStartDM, onMuteChannel, onAddToLibrary, channels, onSelectChannel, onSplitRight, handlesDeepLinks = true }) {
   const { user } = useAuth();
   const { socket, joinChannel, leaveChannel, startTyping, stopTyping, presenceMap } = useSocket();
   const isOnline = useOnlineStatus();
@@ -38,6 +38,40 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
   const [loading, setLoading] = useState(true);
   const [hasMore, setHasMore] = useState(false);
   const [nextCursor, setNextCursor] = useState(null);
+  // Set while the loaded list is an anchored window (a jump to an older
+  // message) that doesn't reach the present yet. Mirrored in refs because
+  // the socket handlers are registered once and read them through closures.
+  // While set: newer pages load on scroll-down, live messages are held back
+  // (appending them would sit after a silent gap) and merged in once the
+  // window catches up, and a "Jump to latest" button is shown.
+  const [hasNewer, setHasNewerState] = useState(false);
+  const hasNewerRef = useRef(false);
+  const newerCursorRef = useRef(null);
+  const heldNewMessagesRef = useRef([]);
+  const [loadingNewer, setLoadingNewer] = useState(false);
+  const loadingNewerRef = useRef(false);
+  // Bumped whenever the message list is replaced wholesale (anchored jump,
+  // jump to latest) so an in-flight page fetch for the OLD list is dropped
+  // instead of being spliced onto the new, unrelated one.
+  const listGenerationRef = useRef(0);
+  const setWindowEdge = useCallback((more, cursor = null) => {
+    hasNewerRef.current = !!more;
+    newerCursorRef.current = more ? cursor : null;
+    if (!more) heldNewMessagesRef.current = [];
+    setHasNewerState(!!more);
+  }, []);
+  // Same-channel deep-link re-target: MessageList's highlight effect must
+  // not look for the target until the anchored window has actually loaded
+  // (it used to fire at a fixed 300ms, find nothing, and toast an error).
+  // landedHighlightId keeps the target alive after ?msg= is cleared from the
+  // URL at 2.5s, in case the fetch took longer than that.
+  const [aroundLoadingFor, setAroundLoadingFor] = useState(null);
+  const [landedHighlightId, setLandedHighlightId] = useState(null);
+  useEffect(() => {
+    if (!landedHighlightId) return;
+    const t = setTimeout(() => setLandedHighlightId(null), 2500);
+    return () => clearTimeout(t);
+  }, [landedHighlightId]);
   const [typingUsers, setTypingUsers] = useState([]);
   const [shouldScrollToBottom, setShouldScrollToBottom] = useState(false);
   const [showMembers, setShowMembers] = useState(false);
@@ -55,8 +89,11 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
   const [setlistSongs, setSetlistSongs] = useState(null);
   const isAdmin = useIsAdmin(workspace);
   const [searchParams, setSearchParams] = useSearchParams();
-  const highlightMessageId = searchParams.get('msg') || null;
-  const autoOpenThreadId = searchParams.get('thread') || null;
+  // Only the primary pane acts on ?msg= / ?thread= deep links. A split-view
+  // pane sees the same URL, and handling it there too fired a duplicate
+  // /around fetch and could consume ?thread= before the main pane did.
+  const highlightMessageId = (handlesDeepLinks && searchParams.get('msg')) || null;
+  const autoOpenThreadId = (handlesDeepLinks && searchParams.get('thread')) || null;
 
   // Clear the msg param after reading so it doesn't persist on navigation
   useEffect(() => {
@@ -116,19 +153,22 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
     // channel message list only paginates top-level messages, and this
     // effect used to just silently give up here). Fetch the parent directly
     // by id instead — getReplies() was built for exactly this case.
-    let cancelled = false;
-    api.getReplies(autoOpenThreadId).then(data => {
-      if (cancelled) return;
+    // Deliberately NOT cancelled by effect re-runs: the latch above means a
+    // re-run (any socket message changes `messages`) would never retry, so
+    // cancelling here silently dropped the thread open in busy channels.
+    // Only drop the result if a different thread target has since taken over.
+    const targetId = autoOpenThreadId;
+    api.getReplies(targetId).then(data => {
+      if (threadAutoOpenedForRef.current !== targetId) return;
       if (data?.parent) {
         openParent(data.parent);
       } else {
         toast.info('That thread could not be opened — the message may have been deleted.');
       }
     }).catch(() => {
-      if (cancelled) return;
+      if (threadAutoOpenedForRef.current !== targetId) return;
       toast.info('That thread could not be opened — the message may have been deleted.');
     });
-    return () => { cancelled = true; };
   }, [autoOpenThreadId, messages, loading, onOpenThread, setSearchParams, toast, highlightMessageId]);
 
   const lastReadAtRef = useRef(null);
@@ -185,7 +225,13 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
           highlightHandledRef.current = `${channel.id}:${highlightMessageId}`;
           try {
             const around = await api.getMessagesAround(channel.id, highlightMessageId);
-            data = { messages: around.messages, hasMore: around.hasMoreBefore, nextCursor: around.beforeCursor };
+            data = {
+              messages: around.messages,
+              hasMore: around.hasMoreBefore,
+              nextCursor: around.beforeCursor,
+              hasNewer: around.hasMoreAfter,
+              newerCursor: around.afterCursor,
+            };
             usedAround = true;
           } catch {
             // Fall through to the normal load below.
@@ -195,9 +241,11 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
           data = await api.getMessages(channel.id);
         }
         if (cancelled) return;
+        listGenerationRef.current++;
         setMessages(data.messages);
         setHasMore(data.hasMore);
         setNextCursor(data.nextCursor);
+        setWindowEdge(!!data.hasNewer, data.newerCursor);
 
         // If there's a legitimate first-unread message (and no explicit deep
         // link — e.g. a search result or thread-reply notification — is
@@ -286,17 +334,28 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
     highlightHandledRef.current = key;
     if (messages.some(m => m.id === highlightMessageId)) return; // already loaded
 
-    let cancelled = false;
-    api.getMessagesAround(channel.id, highlightMessageId).then(around => {
-      if (cancelled) return;
+    // Not cancelled on effect cleanup: ?msg= is cleared from the URL at
+    // 2.5s, which re-runs this effect and would otherwise throw away a slow
+    // fetch. Superseded results are dropped via the handled-key check.
+    const targetId = highlightMessageId;
+    const chId = channel.id;
+    setLandedHighlightId(null);
+    setAroundLoadingFor(targetId);
+    api.getMessagesAround(chId, targetId).then(around => {
+      if (chId !== channelIdRef.current || highlightHandledRef.current !== key) return;
+      listGenerationRef.current++;
       setMessages(around.messages);
       setHasMore(around.hasMoreBefore);
       setNextCursor(around.beforeCursor);
+      setWindowEdge(around.hasMoreAfter, around.afterCursor);
+      setLandedHighlightId(targetId);
     }).catch(() => {
-      // Leave messages as-is; MessageList's highlight effect shows the
-      // "not in current view" toast for a target it truly can't find.
+      // Leave messages as-is; handing the target to MessageList lets its
+      // highlight effect show the "not in current view" toast.
+      if (highlightHandledRef.current === key) setLandedHighlightId(targetId);
+    }).finally(() => {
+      setAroundLoadingFor(cur => (cur === targetId ? null : cur));
     });
-    return () => { cancelled = true; };
     // `messages` is read above but deliberately not a dependency -- it
     // changes on every socket event, and the highlightHandledRef guard above
     // already ensures this effect's actual fetch only ever runs once per
@@ -320,6 +379,10 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
       const handleReconnect = () => {
         const chId = channelIdRef.current;
         joinChannel(chId);
+        // Viewing an anchored older window: don't yank the user back to the
+        // latest page. Anything missed during the disconnect is newer than
+        // the window and arrives via forward pagination / Jump to latest.
+        if (hasNewerRef.current) return;
         // Re-fetch messages to catch anything missed during disconnect
         api.getMessages(chId).then(data => {
           if (chId === channelIdRef.current) {
@@ -380,9 +443,13 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
 
     const container = messagesContainerRef.current;
     const prevScrollHeight = container?.scrollHeight || 0;
+    const generation = listGenerationRef.current;
 
     try {
       const data = await api.getMessages(channel.id, nextCursor);
+      // The list was replaced (e.g. a same-channel jump) while this page was
+      // in flight -- its cursor belongs to the old list, so drop it.
+      if (generation !== listGenerationRef.current) return;
       setMessages(prev => {
         // Defensive de-dupe: even with the ref guard, a server retry or out-of-order
         // socket arrival could attempt to insert an id we already have.
@@ -406,6 +473,56 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
       setLoadingMore(false);
     }
   }, [hasMore, nextCursor, channel.id]);
+
+  // Forward pagination from an anchored window toward the present.
+  const loadNewerMessages = useCallback(async () => {
+    if (!hasNewerRef.current || !newerCursorRef.current || loadingNewerRef.current) return;
+    loadingNewerRef.current = true;
+    setLoadingNewer(true);
+    const generation = listGenerationRef.current;
+    const chId = channel.id;
+    try {
+      const data = await api.getMessagesAround(chId, newerCursorRef.current, 50, { side: 'after' });
+      if (generation !== listGenerationRef.current || chId !== channelIdRef.current) return;
+      // Reached the present: fold in live messages held back meanwhile.
+      const held = data.hasMoreAfter ? [] : heldNewMessagesRef.current;
+      setMessages(prev => {
+        const seen = new Set(prev.map(m => m.id));
+        const fresh = [...data.messages, ...held].filter(m => {
+          if (seen.has(m.id)) return false;
+          seen.add(m.id);
+          return true;
+        });
+        if (held.length > 0) fresh.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+        return fresh.length > 0 ? [...prev, ...fresh] : prev;
+      });
+      setWindowEdge(data.hasMoreAfter, data.afterCursor);
+    } catch (err) {
+      // "Jump to latest" stays visible as the recovery path.
+      console.error('Failed to load newer messages:', err);
+    } finally {
+      loadingNewerRef.current = false;
+      setLoadingNewer(false);
+    }
+  }, [channel.id, setWindowEdge]);
+
+  // Leave an anchored window and reload the channel's latest page.
+  const jumpToLatest = useCallback(async () => {
+    const chId = channel.id;
+    try {
+      const data = await api.getMessages(chId);
+      if (chId !== channelIdRef.current) return;
+      listGenerationRef.current++;
+      setMessages(data.messages);
+      setHasMore(data.hasMore);
+      setNextCursor(data.nextCursor);
+      setWindowEdge(false);
+      setShouldScrollToBottom(true);
+    } catch (err) {
+      console.error('Failed to load latest messages:', err);
+      toast.error('Could not load the latest messages');
+    }
+  }, [channel.id, setWindowEdge, toast]);
 
   // IntersectionObserver for infinite scroll. Belt-and-suspenders: the observer
   // is the primary trigger, but we also attach a scroll listener that fires
@@ -434,6 +551,10 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
       if (container.scrollTop < 100 && hasMore && !loadingMoreRef.current) {
         loadMoreMessages();
       }
+      if (hasNewerRef.current && !loadingNewerRef.current &&
+          container.scrollHeight - container.scrollTop - container.clientHeight < 200) {
+        loadNewerMessages();
+      }
     };
     container.addEventListener('scroll', onScroll, { passive: true });
 
@@ -441,7 +562,7 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
       if (observer) observer.disconnect();
       container.removeEventListener('scroll', onScroll);
     };
-  }, [hasMore, loadMoreMessages]);
+  }, [hasMore, loadMoreMessages, loadNewerMessages]);
 
   const loadPinnedMessages = async () => {
     try {
@@ -457,6 +578,15 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
 
   const handleNewMessage = (message) => {
     if (message.channelId === channelIdRef.current) {
+      if (hasNewerRef.current) {
+        // Anchored older window: hold it until forward pagination reaches
+        // the present (see loadNewerMessages) instead of appending it after
+        // a gap of not-yet-loaded messages.
+        if (!heldNewMessagesRef.current.some(m => m.id === message.id)) {
+          heldNewMessagesRef.current.push(message);
+        }
+        return;
+      }
       setMessages(prev => {
         // Deduplicate: if message already exists (e.g., from API response), skip
         if (prev.some(m => m.id === message.id)) {
@@ -662,6 +792,12 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
   };
 
   const handleSendMessage = async (content, files = []) => {
+    // Sending from an anchored older window: go back to the present first so
+    // the new message lands after the real latest message, not after a gap.
+    if (hasNewerRef.current) {
+      await jumpToLatest();
+      if (hasNewerRef.current) setWindowEdge(false);
+    }
     // Build optimistic attachments from local files (show preview before upload)
     const optimisticAttachments = files.map((file, i) => ({
       id: `temp-att-${Date.now()}-${i}`,
@@ -1176,9 +1312,27 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
               workspaceId={workspace?.id}
               channels={channels}
               onSelectChannel={onSelectChannel}
-              highlightMessageId={highlightMessageId !== highlightClaimedByThread ? highlightMessageId : null}
+              highlightMessageId={(() => {
+                if (aroundLoadingFor) return null;
+                const target = highlightMessageId || landedHighlightId;
+                return target !== highlightClaimedByThread ? target : null;
+              })()}
               scrollToMessageId={firstUnreadMessageIdRef.current}
             />
+            {hasNewer && (
+              <div className="sticky bottom-3 flex justify-center pointer-events-none py-2">
+                <button
+                  type="button"
+                  onClick={jumpToLatest}
+                  className="pointer-events-auto inline-flex items-center gap-2 rounded-full px-4 py-2 min-h-[44px] text-sm font-medium shadow-lg bg-[var(--color-primary)] text-white hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--color-primary)]"
+                >
+                  {loadingNewer ? 'Loading newer messages…' : 'Jump to latest'}
+                  <svg aria-hidden="true" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                  </svg>
+                </button>
+              </div>
+            )}
             <div ref={messagesEndRef} />
           </>
         )}

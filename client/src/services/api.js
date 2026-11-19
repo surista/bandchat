@@ -691,8 +691,9 @@ export class ApiService {
     return this.request(`/messages/${messageId}/replies`);
   }
 
-  async getMessagesAround(channelId, messageId, limit = 25) {
+  async getMessagesAround(channelId, messageId, limit = 25, { side } = {}) {
     const params = new URLSearchParams({ limit });
+    if (side) params.set('side', side);
     return this.request(`/messages/channel/${channelId}/around/${messageId}?${params}`);
   }
 

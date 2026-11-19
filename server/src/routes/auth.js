@@ -226,10 +226,6 @@ router.post('/signup', authLimiter, async (req, res) => {
       return res.status(400).json({ error: 'Email, password, and display name are required' });
     }
 
-    if (!(await verifyTurnstileToken(turnstileToken, req.ip))) {
-      return res.status(400).json({ error: 'Verification failed. Please try again.' });
-    }
-
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       return res.status(400).json({ error: 'Invalid email format' });
@@ -244,6 +240,14 @@ router.post('/signup', authLimiter, async (req, res) => {
     const passwordCheck = validatePasswordComplexity(password);
     if (!passwordCheck.valid) {
       return res.status(400).json({ error: passwordCheck.error });
+    }
+
+    // Turnstile tokens are single-use, so verify only after the cheap input
+    // checks above -- a typo'd email or weak password shouldn't burn the
+    // token. Still ahead of any DB work, so bots can't use this endpoint to
+    // probe which emails are registered.
+    if (!(await verifyTurnstileToken(turnstileToken, req.ip))) {
+      return res.status(400).json({ error: 'Verification failed. Please try again.' });
     }
 
     const existingUser = await prisma.user.findUnique({

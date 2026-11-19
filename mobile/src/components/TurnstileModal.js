@@ -1,7 +1,10 @@
-import { Modal, View, StyleSheet, ActivityIndicator } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Modal, View, Text, Pressable, StyleSheet, ActivityIndicator } from 'react-native';
 import { WebView } from 'react-native-webview';
 import Constants from 'expo-constants';
 import { useTheme } from '../context/ThemeContext';
+import { APP_BASE_URL } from '../utils/constants';
+import { MIN_TOUCH_TARGET } from '../utils/touchTarget';
 
 const SITE_KEY = Constants.expoConfig?.extra?.turnstileSiteKey || '';
 
@@ -46,6 +49,16 @@ const buildHtml = (siteKey) => `<!DOCTYPE html>
  */
 export default function TurnstileModal({ visible, onVerify, onClose }) {
   const { colors } = useTheme();
+  const [failed, setFailed] = useState(false);
+  // Remounts the WebView for a fresh challenge on each open / retry.
+  const [attempt, setAttempt] = useState(0);
+
+  useEffect(() => {
+    if (visible) {
+      setFailed(false);
+      setAttempt((a) => a + 1);
+    }
+  }, [visible]);
 
   const handleMessage = (event) => {
     let data;
@@ -56,14 +69,22 @@ export default function TurnstileModal({ visible, onVerify, onClose }) {
     }
     if (data.type === 'verify' && data.token) {
       onVerify(data.token);
-    } else if (data.type === 'error' || data.type === 'expire') {
-      onClose();
+    } else if (data.type === 'error') {
+      // Don't silently close -- tell the user and let them retry or cancel.
+      setFailed(true);
+    } else if (data.type === 'expire') {
+      setAttempt((a) => a + 1);
     }
   };
 
-  // Only the initial inline-HTML load (reported as about:blank/data: by
-  // different WebView engines) and Cloudflare's own challenge origin are
-  // legitimate here -- reject any other top-level navigation. If the
+  const retry = () => {
+    setFailed(false);
+    setAttempt((a) => a + 1);
+  };
+
+  // Only the initial inline-HTML load (reported as about:blank/data: or as
+  // the baseUrl, depending on WebView engine) and Cloudflare's own challenge
+  // origin are legitimate here -- reject any other top-level navigation. If the
   // Cloudflare script were ever compromised or MITM'd, this stops it from
   // redirecting the WebView to an arbitrary attacker URL inside the signup
   // flow's modal.
@@ -72,6 +93,8 @@ export default function TurnstileModal({ visible, onVerify, onClose }) {
     return (
       url.startsWith('about:blank') ||
       url.startsWith('data:') ||
+      url === APP_BASE_URL ||
+      url === `${APP_BASE_URL}/` ||
       url.startsWith('https://challenges.cloudflare.com/')
     );
   };
@@ -82,16 +105,49 @@ export default function TurnstileModal({ visible, onVerify, onClose }) {
     <Modal visible={visible} animationType="fade" transparent onRequestClose={onClose}>
       <View style={styles.overlay}>
         <View style={[styles.card, { backgroundColor: colors.bgSecondary }]}>
-          <WebView
-            source={{ html: buildHtml(SITE_KEY) }}
-            onMessage={handleMessage}
-            style={styles.webview}
-            startInLoadingState
-            renderLoading={() => <ActivityIndicator style={StyleSheet.absoluteFill} color={colors.primary} />}
-            scrollEnabled={false}
-            originWhitelist={['about:blank', 'https://challenges.cloudflare.com']}
-            onShouldStartLoadWithRequest={handleShouldStartLoad}
-          />
+          {failed ? (
+            <View style={styles.errorBody} accessibilityLiveRegion="polite">
+              <Text style={[styles.errorText, { color: colors.textPrimary }]} maxFontSizeMultiplier={1.5}>
+                Verification couldn't be completed. Check your connection and try again.
+              </Text>
+            </View>
+          ) : (
+            <WebView
+              key={attempt}
+              // Turnstile only runs on hostnames in the site key's allowlist.
+              // Inline HTML with no baseUrl is served from about:blank, which
+              // is never on it -- so load it as the web app's own origin.
+              source={{ html: buildHtml(SITE_KEY), baseUrl: APP_BASE_URL }}
+              onMessage={handleMessage}
+              onError={() => setFailed(true)}
+              style={styles.webview}
+              startInLoadingState
+              renderLoading={() => <ActivityIndicator style={StyleSheet.absoluteFill} color={colors.primary} />}
+              scrollEnabled={false}
+              originWhitelist={['about:blank', APP_BASE_URL, 'https://challenges.cloudflare.com']}
+              onShouldStartLoadWithRequest={handleShouldStartLoad}
+            />
+          )}
+          <View style={[styles.actions, { borderTopColor: colors.border }]}>
+            <Pressable
+              onPress={onClose}
+              style={styles.actionButton}
+              accessibilityRole="button"
+              accessibilityLabel="Cancel verification"
+            >
+              <Text style={[styles.actionText, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>Cancel</Text>
+            </Pressable>
+            {failed && (
+              <Pressable
+                onPress={retry}
+                style={styles.actionButton}
+                accessibilityRole="button"
+                accessibilityLabel="Retry verification"
+              >
+                <Text style={[styles.actionText, { color: colors.primary }]} maxFontSizeMultiplier={1.5}>Try Again</Text>
+              </Pressable>
+            )}
+          </View>
         </View>
       </View>
     </Modal>
@@ -100,6 +156,11 @@ export default function TurnstileModal({ visible, onVerify, onClose }) {
 
 const styles = StyleSheet.create({
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center' },
-  card: { width: 320, height: 160, borderRadius: 12, overflow: 'hidden' },
-  webview: { flex: 1, backgroundColor: 'transparent' },
+  card: { width: 320, borderRadius: 12, overflow: 'hidden' },
+  webview: { height: 160, backgroundColor: 'transparent' },
+  errorBody: { height: 160, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 20 },
+  errorText: { fontSize: 15, textAlign: 'center' },
+  actions: { flexDirection: 'row', borderTopWidth: StyleSheet.hairlineWidth },
+  actionButton: { flex: 1, minHeight: MIN_TOUCH_TARGET, alignItems: 'center', justifyContent: 'center' },
+  actionText: { fontSize: 17, fontWeight: '600' },
 });

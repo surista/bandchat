@@ -215,6 +215,9 @@ router.get('/channel/:channelId/around/:messageId', authenticate, isChannelMembe
       return res.status(400).json({ error: 'Invalid message id' });
     }
     const limit = Math.min(parseInt(req.query.limit) || 25, 50);
+    // side=after: forward pagination from an anchored window (the client is
+    // scrolling down toward the present) -- only the target + newer rows.
+    const beforeLimit = req.query.side === 'after' ? 0 : limit;
 
     const target = await prisma.message.findFirst({
       where: { id: messageId, channelId, parentId: null }
@@ -229,6 +232,11 @@ router.get('/channel/:channelId/around/:messageId', authenticate, isChannelMembe
     const retentionFilter = limits.messageRetentionDays
       ? { gte: new Date(Date.now() - limits.messageRetentionDays * 86400000) }
       : undefined;
+    // A message outside the plan's retention window is as unreachable here
+    // as it is from the regular list endpoint.
+    if (retentionFilter && target.createdAt < retentionFilter.gte) {
+      return res.status(404).json({ error: 'Message not found' });
+    }
 
     const blockedUsers = await prisma.blockedUser.findMany({
       where: { blockerId: req.user.id },
@@ -236,11 +244,13 @@ router.get('/channel/:channelId/around/:messageId', authenticate, isChannelMembe
     });
     const blockedIds = blockedUsers.map(b => b.blockedUserId);
 
+    // NOTE: no createdAt key here -- the before/after queries below each set
+    // their own createdAt range, which would silently replace (not merge
+    // with) a retention filter placed in this object.
     const baseWhere = {
       channelId,
       parentId: null,
       ...(blockedIds.length > 0 && { authorId: { notIn: blockedIds } }),
-      ...(retentionFilter && { createdAt: retentionFilter })
     };
     const include = {
       author: { select: { id: true, displayName: true, avatarUrl: true } },
@@ -251,8 +261,8 @@ router.get('/channel/:channelId/around/:messageId', authenticate, isChannelMembe
 
     const [beforeAndTarget, after] = await Promise.all([
       prisma.message.findMany({
-        where: { ...baseWhere, createdAt: { lte: target.createdAt } },
-        take: limit + 1,
+        where: { ...baseWhere, createdAt: { lte: target.createdAt, ...(retentionFilter || {}) } },
+        take: beforeLimit + 1,
         orderBy: { createdAt: 'desc' },
         include
       }),
@@ -264,9 +274,9 @@ router.get('/channel/:channelId/around/:messageId', authenticate, isChannelMembe
       })
     ]);
 
-    const hasMoreBefore = beforeAndTarget.length > limit;
+    const hasMoreBefore = beforeAndTarget.length > beforeLimit;
     const hasMoreAfter = after.length > limit;
-    const beforeItems = (hasMoreBefore ? beforeAndTarget.slice(0, limit) : beforeAndTarget).reverse();
+    const beforeItems = (hasMoreBefore ? beforeAndTarget.slice(0, beforeLimit) : beforeAndTarget).reverse();
     const afterItems = hasMoreAfter ? after.slice(0, limit) : after;
     const result = [...beforeItems, ...afterItems];
 
@@ -329,8 +339,8 @@ router.get('/channel/:channelId/around/:messageId', authenticate, isChannelMembe
       messages: enriched,
       hasMoreBefore,
       hasMoreAfter,
-      beforeCursor: hasMoreBefore ? enriched[0].id : null,
-      afterCursor: hasMoreAfter ? enriched[enriched.length - 1].id : null
+      beforeCursor: hasMoreBefore && enriched.length > 0 ? enriched[0].id : null,
+      afterCursor: hasMoreAfter && enriched.length > 0 ? enriched[enriched.length - 1].id : null
     });
   } catch (error) {
     console.error('Get messages around error:', error);

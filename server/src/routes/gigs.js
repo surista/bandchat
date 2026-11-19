@@ -91,9 +91,18 @@ async function postPendingGigToChannels(gig, channelIds, authorId, io) {
 }
 
 // Edit each posted card in place to show the gig as confirmed.
-async function confirmPendingGigPosts(gig, io) {
+function confirmPendingGigPosts(gig, io) {
+  return rewritePendingGigPosts(gig, io, formatConfirmedGigAnnouncement(gig));
+}
+
+// Re-render each still-tentative card after the gig's title/date/venue was
+// edited, so the channel cards don't keep showing the old details.
+function refreshPendingGigPosts(gig, io) {
+  return rewritePendingGigPosts(gig, io, formatPendingGigAnnouncement(gig));
+}
+
+async function rewritePendingGigPosts(gig, io, content) {
   const posts = await prisma.gigChannelPost.findMany({ where: { gigId: gig.id } });
-  const content = formatConfirmedGigAnnouncement(gig);
   for (const post of posts) {
     const updated = await prisma.message.update({
       where: { id: post.messageId },
@@ -735,13 +744,32 @@ router.post('/workspace/:workspaceId', authenticate, apiLimiter, isWorkspaceMemb
     // Only meaningful (and only allowed) for a tentative gig — channels it
     // should be announced into once created.
     let validChannelIds = [];
-    if (isPending && channelIds?.length > 0) {
+    if (channelIds !== undefined && channelIds !== null && !Array.isArray(channelIds)) {
+      return res.status(400).json({ error: 'channelIds must be an array' });
+    }
+    const requestedChannelIds = [...new Set((channelIds || []).filter((id) => typeof id === 'string'))];
+    if (isPending && requestedChannelIds.length > 0) {
+      // A personal event is visible only to its creator (+ admins) — posting
+      // its details into shared channels would leak it.
+      if (isPersonal) {
+        return res.status(400).json({ error: 'Personal events cannot be announced to channels' });
+      }
+      // Same access rules as sending a message: never into a DM, and into a
+      // private channel only if the creator is a member of it.
       const validChannels = await prisma.channel.findMany({
-        where: { id: { in: channelIds }, workspaceId: req.params.workspaceId },
+        where: {
+          id: { in: requestedChannelIds },
+          workspaceId: req.params.workspaceId,
+          isDirect: false,
+          OR: [
+            { isPrivate: false },
+            { members: { some: { userId: req.user.id } } },
+          ],
+        },
         select: { id: true },
       });
-      if (validChannels.length !== channelIds.length) {
-        return res.status(400).json({ error: 'One or more channels not found in this workspace' });
+      if (validChannels.length !== requestedChannelIds.length) {
+        return res.status(400).json({ error: 'One or more channels not found or not accessible' });
       }
       validChannelIds = validChannels.map((c) => c.id);
     }
@@ -901,14 +929,20 @@ router.post('/workspace/:workspaceId', authenticate, apiLimiter, isWorkspaceMemb
     });
 
     const io = req.app.get('io');
-    io.to(`workspace:${req.params.workspaceId}`).emit('gig:created', gig);
+    await emitGigEvent(io, 'gig:created', gig);
 
     // A tentative gig announces itself via the channel cards below instead
     // of a workspace-wide "New Gig" blast — that's the whole point of
     // picking specific channels rather than notifying everyone.
     if (isPending) {
       if (validChannelIds.length > 0) {
-        await postPendingGigToChannels(gig, validChannelIds, req.user.id, io);
+        // The gig already exists at this point -- a failed card post must
+        // not turn into a 500, or the client retries and creates a duplicate.
+        try {
+          await postPendingGigToChannels(gig, validChannelIds, req.user.id, io);
+        } catch (err) {
+          console.error('Failed to post tentative gig to channels:', err);
+        }
       }
     } else {
       // Send push notification to workspace members
@@ -970,9 +1004,15 @@ router.post('/:gigId/confirm', authenticate, async (req, res) => {
     if (membership.role !== 'ADMIN') return res.status(403).json({ error: 'Only a workspace admin can confirm a gig' });
     if (existingGig.status !== 'PENDING') return res.status(400).json({ error: 'Only a pending gig can be confirmed' });
 
-    const gig = await prisma.gig.update({
-      where: { id: req.params.gigId },
+    // Conditional update so a concurrent confirm/reject can't both win.
+    const { count } = await prisma.gig.updateMany({
+      where: { id: req.params.gigId, status: 'PENDING' },
       data: { status: 'SCHEDULED' },
+    });
+    if (count === 0) return res.status(409).json({ error: 'This gig was already confirmed or rejected' });
+
+    const gig = await prisma.gig.findUnique({
+      where: { id: req.params.gigId },
       include: {
         createdBy: { select: USER_SELECT_BRIEF },
         venueRecord: { select: { id: true, name: true, address: true, city: true, imageUrl: true, phone: true, email: true, website: true, capacity: true } },
@@ -983,7 +1023,7 @@ router.post('/:gigId/confirm', authenticate, async (req, res) => {
     });
 
     const io = req.app.get('io');
-    io.to(`workspace:${gig.workspaceId}`).emit('gig:updated', gig);
+    await emitGigEvent(io, 'gig:updated', gig);
     await confirmPendingGigPosts(gig, io);
 
     logAudit('gig.confirmed', { actorId: req.user.id, targetId: gig.id, metadata: { title: gig.title } });
@@ -1011,13 +1051,15 @@ router.post('/:gigId/reject', authenticate, async (req, res) => {
     if (membership.role !== 'ADMIN') return res.status(403).json({ error: 'Only a workspace admin can reject a gig' });
     if (existingGig.status !== 'PENDING') return res.status(400).json({ error: 'Only a pending gig can be rejected' });
 
-    const gig = await prisma.gig.update({
-      where: { id: req.params.gigId },
+    const { count } = await prisma.gig.updateMany({
+      where: { id: req.params.gigId, status: 'PENDING' },
       data: { status: 'CANCELLED' },
     });
+    if (count === 0) return res.status(409).json({ error: 'This gig was already confirmed or rejected' });
+    const gig = await prisma.gig.findUnique({ where: { id: req.params.gigId } });
 
     const io = req.app.get('io');
-    io.to(`workspace:${gig.workspaceId}`).emit('gig:updated', gig);
+    await emitGigEvent(io, 'gig:updated', gig);
     await rejectPendingGigPosts(gig.id, io);
 
     logAudit('gig.rejected', { actorId: req.user.id, targetId: gig.id, metadata: { title: gig.title } });
@@ -1210,6 +1252,19 @@ router.put('/:gigId', authenticate, async (req, res) => {
       return res.status(403).json({ error: 'Only the event creator or a workspace admin can modify this event' });
     }
 
+    // Tentative (PENDING) is a creation-time state with its own admin-gated
+    // confirm/reject flow -- the generic edit can't be used to skip it.
+    if (status && status !== existingGig.status) {
+      if (status === 'PENDING') {
+        return res.status(400).json({ error: 'An existing event cannot be made tentative' });
+      }
+      // The creator may withdraw their own tentative gig (CANCELLED), but
+      // only an admin can confirm it.
+      if (existingGig.status === 'PENDING' && !isAdmin && status !== 'CANCELLED') {
+        return res.status(403).json({ error: 'Only a workspace admin can confirm a tentative gig' });
+      }
+    }
+
     // If type is changing from GIG to something else, delete auto-created setlists
     if (type && type !== 'GIG' && existingGig.type === 'GIG') {
       const autoSetlistIds = [];
@@ -1356,7 +1411,7 @@ router.put('/:gigId', authenticate, async (req, res) => {
     });
 
     const io = req.app.get('io');
-    io.to(`workspace:${gig.workspaceId}`).emit('gig:updated', gig);
+    await emitGigEvent(io, 'gig:updated', gig);
 
     // A pending gig's status can also change here (the generic edit form),
     // not just via the dedicated /confirm and /reject routes — keep the
@@ -1368,6 +1423,12 @@ router.put('/:gigId', authenticate, async (req, res) => {
       } else {
         await confirmPendingGigPosts(gig, io);
       }
+    } else if (gig.status === 'PENDING' && (
+      gig.title !== existingGig.title ||
+      gig.venue !== existingGig.venue ||
+      new Date(gig.date).getTime() !== new Date(existingGig.date).getTime()
+    )) {
+      await refreshPendingGigPosts(gig, io);
     }
 
     // Send push notification for gig update
@@ -1465,23 +1526,36 @@ router.put('/:gigId/complete', authenticate, async (req, res) => {
         .filter(Boolean);
     }
 
-    // Update status to completed
-    const gig = await prisma.gig.update({
-      where: { id: req.params.gigId },
-      data: { status: 'COMPLETED' }
-    });
+    // De-dupe: the same song can legitimately appear in more than one of the
+    // gig's setlists (e.g. Set 1 and an encore), and the count check below
+    // compares distinct DB matches against this list's length.
+    if (songIds !== undefined && songIds !== null && !Array.isArray(songIds)) {
+      return res.status(400).json({ error: 'songIds must be an array' });
+    }
+    songIds = [...new Set((songIds || []).filter((id) => typeof id === 'string'))];
 
-    // Record songs played. Verify each songId belongs to this gig's
-    // workspace -- without this, a client-supplied id from ANOTHER
+    // Validate BEFORE marking the gig completed, so a rejected request leaves
+    // the gig untouched and retryable. Verify each songId belongs to this
+    // gig's workspace -- without this, a client-supplied id from ANOTHER
     // workspace would be inserted as-is, leaking that workspace's song
     // title/artist into this gig's "songs played" list and stats.
-    if (songIds && songIds.length > 0) {
+    if (songIds.length > 0) {
       const validSongs = await prisma.song.count({
         where: { id: { in: songIds }, workspaceId: existingGig.workspaceId }
       });
       if (validSongs !== songIds.length) {
         return res.status(400).json({ error: 'One or more songs not found in this workspace' });
       }
+    }
+
+    // Update status to completed
+    const gig = await prisma.gig.update({
+      where: { id: req.params.gigId },
+      data: { status: 'COMPLETED' }
+    });
+
+    // Record songs played.
+    if (songIds.length > 0) {
       await prisma.gigSong.createMany({
         data: songIds.map(songId => ({
           gigId: req.params.gigId,
@@ -1816,7 +1890,7 @@ router.post('/:gigId/duplicate', authenticate, async (req, res) => {
     });
 
     const io = req.app.get('io');
-    io.to(`workspace:${source.workspaceId}`).emit('gig:created', newGig);
+    await emitGigEvent(io, 'gig:created', newGig);
 
     res.status(201).json(newGig);
   } catch (error) {
@@ -2570,6 +2644,14 @@ async function resolveCommentAudience(gig) {
   const ids = new Set(admins.map(a => a.userId));
   if (gig.createdById) ids.add(gig.createdById);
   return Array.from(ids);
+}
+
+// gig:created / gig:updated carry the full gig (title, venue, pay, notes...).
+// A personal event must only reach its creator + admins, same audience as
+// its comments.
+async function emitGigEvent(io, event, gig) {
+  const audience = await resolveCommentAudience(gig);
+  emitCommentEvent(io, event, gig, gig, audience);
 }
 
 function emitCommentEvent(io, event, payload, gig, audienceUserIds) {

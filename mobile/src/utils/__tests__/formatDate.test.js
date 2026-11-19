@@ -40,6 +40,17 @@ describe('date-only helpers', () => {
     expect(formatDateOnly(toDateOnlyString(local))).toBe('12-Nov-2026');
   });
 
+  test('uses the local calendar day for a full gig date-time (not UTC midnight)', () => {
+    // A gig instant: whatever the test machine's timezone, the result must be
+    // the local day of that instant, never its UTC day.
+    const instant = new Date(2026, 10, 12, 20, 0); // 8pm local
+    expect(formatDateOnly(instant.toISOString())).toBe('12-Nov-2026');
+    const localMidnight = new Date(2026, 10, 12, 0, 0);
+    if (localMidnight.getTimezoneOffset() !== 0) {
+      expect(formatDateOnly(localMidnight.toISOString())).toBe('12-Nov-2026');
+    }
+  });
+
   test('returns empty values for missing or invalid input', () => {
     expect(parseDateOnly(null)).toBeNull();
     expect(parseDateOnly('not a date')).toBeNull();
